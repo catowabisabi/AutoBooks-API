@@ -251,4 +251,10 @@ from .models_extended import (
     # Brainstorming Assistant
     BrainstormSession,
     BrainstormIdea,
+    # AI Agent System
+    AIActionType,
+    AIActionStatus,
+    AIAgent,
+    AIActionLog,
+    AIConversation,
 )

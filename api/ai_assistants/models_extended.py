@@ -595,3 +595,234 @@ class BrainstormIdea(BaseModel):
     
     class Meta:
         ordering = ['-rating', '-created_at']
+
+
+# =================================================================
+# AI Agent System - Action Logging & Autonomous Operations
+# =================================================================
+
+class AIActionType(models.TextChoices):
+    """Types of actions AI Agent can perform"""
+    CREATE = 'CREATE', 'Create Record'
+    UPDATE = 'UPDATE', 'Update Record'
+    DELETE = 'DELETE', 'Delete Record'
+    BULK_CREATE = 'BULK_CREATE', 'Bulk Create'
+    BULK_UPDATE = 'BULK_UPDATE', 'Bulk Update'
+    BULK_DELETE = 'BULK_DELETE', 'Bulk Delete'
+    QUERY = 'QUERY', 'Query Data'
+    ANALYZE = 'ANALYZE', 'Analyze Data'
+
+
+class AIActionStatus(models.TextChoices):
+    """Status of AI action"""
+    PENDING = 'PENDING', 'Pending Approval'
+    APPROVED = 'APPROVED', 'Approved'
+    EXECUTED = 'EXECUTED', 'Executed Successfully'
+    ROLLED_BACK = 'ROLLED_BACK', 'Rolled Back'
+    FAILED = 'FAILED', 'Failed'
+    REJECTED = 'REJECTED', 'Rejected by User'
+
+
+class AIAgent(BaseModel):
+    """
+    AI Agent configuration - defines agent capabilities and permissions
+    AI代理配置 - 定義代理能力和權限
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    name = models.CharField(max_length=100, unique=True)
+    display_name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    
+    # Agent type
+    agent_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('BRAINSTORM', 'Brainstorming Assistant'),
+            ('EMAIL', 'Email Assistant'),
+            ('DOCUMENT', 'Document Assistant'),
+            ('PLANNER', 'Planner Assistant'),
+            ('BUSINESS', 'Business CRUD Agent'),
+            ('ANALYST', 'Data Analyst Agent'),
+            ('GENERAL', 'General Purpose Agent'),
+        ],
+        default='GENERAL'
+    )
+    
+    # Capabilities (JSON list of tool names agent can use)
+    allowed_tools = models.JSONField(default=list, help_text='List of tool IDs this agent can use')
+    
+    # Auto-execution settings
+    auto_execute = models.BooleanField(default=False, help_text='Execute actions without approval')
+    max_auto_actions = models.IntegerField(default=10, help_text='Max actions per session without approval')
+    
+    # Model configuration
+    llm_provider = models.CharField(max_length=50, default='openai')
+    llm_model = models.CharField(max_length=100, default='gpt-4o-mini')
+    temperature = models.FloatField(default=0.7)
+    
+    # System prompt
+    system_prompt = models.TextField(blank=True)
+    
+    # Owner
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='created_agents',
+        null=True,
+        blank=True
+    )
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'AI Agent'
+        verbose_name_plural = 'AI Agents'
+    
+    def __str__(self):
+        return f"{self.display_name} ({self.agent_type})"
+
+
+class AIActionLog(BaseModel):
+    """
+    Log all AI agent actions for audit trail and rollback capability
+    記錄所有AI代理操作以進行審計追蹤和回滾功能
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Which agent performed the action
+    agent = models.ForeignKey(
+        AIAgent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='action_logs'
+    )
+    
+    # Who triggered the action
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ai_action_logs'
+    )
+    
+    # Session tracking
+    session_id = models.CharField(max_length=100, db_index=True, help_text='Group actions in same conversation')
+    
+    # Action details
+    action_type = models.CharField(
+        max_length=20,
+        choices=AIActionType.choices
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=AIActionStatus.choices,
+        default=AIActionStatus.PENDING
+    )
+    
+    # Target information
+    target_model = models.CharField(max_length=100, help_text='e.g., business.AuditProject')
+    target_id = models.CharField(max_length=100, blank=True, help_text='Record ID if applicable')
+    
+    # Data for rollback
+    data_before = models.JSONField(default=dict, help_text='State before action (for rollback)')
+    data_after = models.JSONField(default=dict, help_text='State after action / intended change')
+    
+    # User prompt that triggered this action
+    user_prompt = models.TextField(blank=True, help_text='Original user request')
+    
+    # AI reasoning
+    ai_reasoning = models.TextField(blank=True, help_text='Why AI decided to take this action')
+    ai_confidence = models.FloatField(default=0, help_text='AI confidence score 0-1')
+    
+    # Execution details
+    executed_at = models.DateTimeField(null=True, blank=True)
+    execution_duration_ms = models.IntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    
+    # Rollback tracking
+    rolled_back_at = models.DateTimeField(null=True, blank=True)
+    rolled_back_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rolled_back_actions'
+    )
+    rollback_reason = models.TextField(blank=True)
+    
+    # Link to parent action (for batch operations)
+    parent_action = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='child_actions'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'AI Action Log'
+        verbose_name_plural = 'AI Action Logs'
+        indexes = [
+            models.Index(fields=['session_id', '-created_at']),
+            models.Index(fields=['target_model', 'target_id']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"[{self.action_type}] {self.target_model} - {self.status}"
+    
+    @property
+    def can_rollback(self) -> bool:
+        """Check if this action can be rolled back"""
+        return (
+            self.status == AIActionStatus.EXECUTED and
+            self.action_type in [AIActionType.CREATE, AIActionType.UPDATE, AIActionType.DELETE] and
+            bool(self.data_before or self.action_type == AIActionType.CREATE)
+        )
+
+
+class AIConversation(BaseModel):
+    """
+    AI conversation session for context tracking
+    AI對話會話用於上下文追蹤
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    session_id = models.CharField(max_length=100, unique=True, db_index=True)
+    
+    # User
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ai_conversations'
+    )
+    
+    # Agent being used
+    agent = models.ForeignKey(
+        AIAgent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='conversations'
+    )
+    
+    # Conversation state
+    title = models.CharField(max_length=255, blank=True)
+    messages = models.JSONField(default=list, help_text='Chat history [{role, content, timestamp}]')
+    context = models.JSONField(default=dict, help_text='Additional context for AI')
+    
+    # Stats
+    total_actions = models.IntegerField(default=0)
+    successful_actions = models.IntegerField(default=0)
+    failed_actions = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'AI Conversation'
+        verbose_name_plural = 'AI Conversations'
+    
+    def __str__(self):
+        return f"Conversation {self.session_id[:8]}... - {self.user}"

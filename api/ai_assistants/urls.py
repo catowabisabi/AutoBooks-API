@@ -32,6 +32,7 @@ from ai_assistants.views.brainstorm_viewset import (
 from ai_assistants.views.finance_viewset import ReceiptAnalyzerViewSet
 from ai_assistants.views.ai_service_viewset import AIServiceViewSet
 from ai_assistants.views.accounting_viewset import AccountingAssistantViewSet
+from ai_assistants.views.agent_viewset import AIAgentViewSet
 
 # Router for viewsets
 router = DefaultRouter()
@@ -125,6 +126,29 @@ urlpatterns = [
     path("accounting-assistant/stats/", 
          AccountingAssistantViewSet.as_view({"get": "get_stats"}), 
          name="accounting-assistant-stats"),
+    
+    # AI Agent / AI代理 (Autonomous CRUD with logging)
+    path("agent/chat/", 
+         AIAgentViewSet.as_view({"post": "chat"}), 
+         name="ai-agent-chat"),
+    path("agent/agents/", 
+         AIAgentViewSet.as_view({"get": "agents"}), 
+         name="ai-agent-agents"),
+    path("agent/tools/", 
+         AIAgentViewSet.as_view({"get": "tools"}), 
+         name="ai-agent-tools"),
+    path("agent/actions/", 
+         AIAgentViewSet.as_view({"get": "actions"}), 
+         name="ai-agent-actions"),
+    path("agent/actions/<uuid:pk>/rollback/", 
+         AIAgentViewSet.as_view({"post": "rollback_action"}), 
+         name="ai-agent-rollback"),
+    path("agent/sessions/", 
+         AIAgentViewSet.as_view({"get": "sessions"}), 
+         name="ai-agent-sessions"),
+    path("agent/sessions/<str:session_id>/", 
+         AIAgentViewSet.as_view({"get": "get_session"}), 
+         name="ai-agent-session-detail"),
     
     # Include router URLs
     path("", include(router.urls)),
