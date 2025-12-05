@@ -61,3 +61,7 @@ typing_extensions==4.14.0
 tzdata==2024.2
 uritemplate==4.2.0
 urllib3==2.5.0
+
+# API Documentation
+drf-spectacular==0.28.0
+drf-spectacular-sidecar==2024.11.1

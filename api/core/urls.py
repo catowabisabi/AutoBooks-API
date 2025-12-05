@@ -6,12 +6,22 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
+)
 from users.google_oauth import GoogleOAuthURLView, GoogleOAuthCallbackView, GoogleOAuthTokenView
 from core.views.api_key_views import ApiKeyStatusView, ApiKeyManageView, ApiKeyTestView
 from core.views.rag_views import RAGQueryView, RAGChatView, RAGKnowledgeListView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # API Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     # JWT Auth
     path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
