@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: erp-core
+  template:
+    metadata:
+      labels:
+        app: erp-core
+    spec:
+      containers:
+        - name: erp-core
+          image: 935364008466.dkr.ecr.us-east-2.amazonaws.com/wisematic/erp-core
+          ports:
+            - containerPort: 8000

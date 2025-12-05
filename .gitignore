@@ -1,0 +1,226 @@
+# =================================================================
+# Wisematic ERP Core - .gitignore
+# =================================================================
+
+# =================================================================
+# 🔐 SECRETS AND CREDENTIALS (最重要！)
+# =================================================================
+# Google Cloud / GCP Service Account Keys
+angular-pipe-*.json
+*-credentials.json
+*-service-account.json
+service-account*.json
+gcp-*.json
+firebase-*.json
+google-*.json
+
+# API Keys and Secrets
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+.secrets/
+
+# =================================================================
+# 🔒 Environment Variables
+# =================================================================
+.env
+.env.*
+!.env.example
+!.env.template
+local_settings.py
+
+# =================================================================
+# 💾 Database
+# =================================================================
+*.sqlite3
+*.db
+db.sqlite3
+*.sql
+!migrations/*.sql
+
+# =================================================================
+# 🐍 Python
+# =================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# =================================================================
+# 🌐 Django
+# =================================================================
+*.log
+staticfiles/
+static_collected/
+media/
+uploads/
+
+# =================================================================
+# 💻 IDE / Editor
+# =================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.settings/
+*.code-workspace
+
+# =================================================================
+# 🖥️ OS Generated
+# =================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+.nfs*
+
+# =================================================================
+# 🐳 Docker / Kubernetes
+# =================================================================
+docker-compose.override.yml
+docker-compose.local.yml
+*.kubeconfig
+.kube/
+
+# =================================================================
+# 🔧 Virtual Environments
+# =================================================================
+.venv/
+venv/
+env/
+ENV/
+.conda/
+conda-env/
+
+# =================================================================
+# 📦 Node (如果有前端)
+# =================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# =================================================================
+# 📁 Temporary Files
+# =================================================================
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.swp
+*.orig
+*.rej
+
+# =================================================================
+# 📊 Logs
+# =================================================================
+logs/
+*.log
+celerybeat-schedule
+celerybeat.pid
+
+# =================================================================
+# 🧪 Testing
+# =================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/

@@ -1,0 +1,41 @@
+# Django Core
+Django>=5.0
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.3
+django-cors-headers>=4.3
+
+# Database
+psycopg2-binary>=2.9
+
+# Environment
+python-dotenv>=1.0
+
+# AI APIs
+openai>=1.0
+google-generativeai>=0.3
+
+# Data Processing
+numpy>=1.24
+pandas>=2.0
+plotly>=5.0
+
+# PDF & Document Processing
+pdf2image>=1.16
+PyPDF2>=3.0
+pypdf>=3.0
+Pillow>=10.0
+openpyxl>=3.1
+xlrd>=2.0
+
+# Cloud Services
+supabase>=2.0
+google-cloud-aiplatform>=1.38
+google-cloud-documentai>=2.20
+
+# Authentication
+google-auth>=2.0
+google-auth-oauthlib>=1.0
+requests>=2.31
+
+# Utilities
+python-dateutil>=2.8

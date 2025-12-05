@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: erp-core-ingress
+  namespace: wisematic
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-2:935364008466:certificate/d499db97-e78a-457e-bdd3-5b1e508aa379
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /api/v1/health/
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  ingressClassName: alb
+  rules:
+    - host: erp-core.wisematic.click
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: erp-core-service
+                port:
+                  number: 8000

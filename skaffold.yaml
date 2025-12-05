@@ -1,0 +1,25 @@
+apiVersion: skaffold/v2beta29
+kind: Config
+metadata:
+  name: erp-core
+build:
+  platforms: ["linux/amd64"]
+  artifacts:
+    - image: 935364008466.dkr.ecr.us-east-2.amazonaws.com/wisematic/erp-core
+      docker:
+        cliFlags:
+          - --load
+        dockerfile: Dockerfile
+  local:
+    push: true
+  tagPolicy:
+    gitCommit:
+      variant: "AbbrevCommitSha"
+      ignoreChanges: false
+deploy:
+  kubectl:
+    manifests:
+      - k8s/deployment.yaml
+      - k8s/service.yaml
+      - k8s/ingress.yaml
+    defaultNamespace: wisematic

@@ -1,0 +1,21 @@
+employee_id,name,email,department,position,manager
+1001,John Smith,johnsmith@company.com,Engineering,Senior Developer,Sarah Johnson
+1002,Emily Brown,emilybrown@company.com,Engineering,Junior Developer,John Smith
+1003,Michael Davis,michaeldavis@company.com,Engineering,DevOps Engineer,Sarah Johnson
+1004,Sarah Johnson,sarahjohnson@company.com,Engineering,Engineering Manager,David Wilson
+1005,Robert Taylor,roberttaylor@company.com,Product,Product Manager,David Wilson
+1006,Jessica Lee,jessicalee@company.com,Product,UX Designer,Robert Taylor
+1007,David Wilson,davidwilson@company.com,Executive,CTO,Mary Anderson
+1008,Amanda Martin,amandamartin@company.com,Marketing,Marketing Specialist,Thomas Wright
+1009,James Thompson,jamesthompson@company.com,Marketing,Content Writer,Thomas Wright
+1010,Thomas Wright,thomaswright@company.com,Marketing,Marketing Director,Mary Anderson
+1011,Lisa Garcia,lisagarcia@company.com,HR,HR Specialist,Patricia Clark
+1012,Patricia Clark,patriciaclark@company.com,HR,HR Manager,Mary Anderson
+1013,Christopher Brown,christopherbrown@company.com,Finance,Financial Analyst,Kevin Miller
+1014,Kevin Miller,kevinmiller@company.com,Finance,Finance Director,Mary Anderson
+1015,Mary Anderson,maryanderson@company.com,Executive,CEO,
+1016,Daniel White,danielwhite@company.com,Engineering,QA Engineer,Sarah Johnson
+1017,Sophia Martinez,sophiamartinez@company.com,Product,Product Analyst,Robert Taylor
+1018,William Johnson,williamjohnson@company.com,Engineering,Frontend Developer,John Smith
+1019,Olivia Adams,oliviaadams@company.com,Marketing,Social Media Manager,Thomas Wright
+1020,Shivang Bhargava,shivangbhargava001@gmail.com,Engineering,Accountant,Kevin Miller

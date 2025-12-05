@@ -1,0 +1,301 @@
+Employee_ID,Full_Name,Department,Job_Title,Salary,Date_of_Joining,Performance_Score,Years_of_Experience,Education_Level,Work_Location,Remote_Work,Projects_Completed,Last_Promotion_Date,Attrition_Risk,Work_Hours_Per_Week
+EMP1000,Brandon Juarez,IT,Director,83609,2015-10-20,3.4,12,Bachelor's,Chicago,Yes,41,2016-01-02,Low,54
+EMP1001,Brooke Yoder,Sales,Director,143608,2021-01-04,7.6,16,Diploma,Austin,No,39,2024-01-14,High,48
+EMP1002,Rachel Taylor,Customer Support,Specialist,60861,2019-09-14,2.8,21,Bachelor's,New York,No,14,2021-09-07,Medium,30
+EMP1003,Joseph Anderson,Operations,Consultant,104676,2023-02-01,5.5,6,Diploma,Austin,No,29,2023-04-21,High,45
+EMP1004,Paul Estrada,HR,Consultant,48458,2021-07-07,3.8,30,Associate Degree,New York,No,14,2025-01-02,Medium,52
+EMP1005,Mrs. Sydney Vargas,Legal,Engineer,140869,2020-01-03,7.8,30,Master's,New York,Yes,42,2021-07-13,Medium,46
+EMP1006,Mark Nelson,IT,Consultant,69421,2022-07-13,4.6,26,Associate Degree,New York,Yes,15,2022-08-21,Medium,40
+EMP1007,Erin Pham,HR,Coordinator,82781,2019-01-09,5.9,29,Master's,New York,No,9,2020-02-12,Medium,30
+EMP1008,Patricia Turner,Sales,Consultant,41063,2023-10-18,9.6,6,PhD,Seattle,No,21,2023-10-31,Low,52
+EMP1009,Stacey Mckenzie,Customer Support,Consultant,142450,2019-12-09,4.2,15,Diploma,San Francisco,Yes,23,2021-09-10,High,57
+EMP1010,Cindy Hawkins,Customer Support,Director,92110,2018-01-31,5.2,11,Bachelor's,Austin,No,9,2021-01-19,High,49
+EMP1011,Aaron Randall,Legal,Manager,40694,2017-07-01,1.4,25,Master's,Seattle,Yes,24,2023-12-28,High,36
+EMP1012,Janice Lewis,HR,Specialist,69447,2016-04-09,9.6,28,Bachelor's,Seattle,Yes,19,2016-12-09,Medium,53
+EMP1013,Susan Russell,Operations,Coordinator,140648,2016-02-05,8.6,11,PhD,San Francisco,Yes,27,2025-01-19,High,38
+EMP1014,Margaret Wright,Engineering,Technician,67714,2019-02-27,2.2,7,Master's,Chicago,Yes,14,2020-03-07,High,54
+EMP1015,Catherine Brown,Finance,Analyst,92490,2023-11-18,9.2,17,Associate Degree,Chicago,No,47,2025-01-26,Medium,53
+EMP1016,Tyler Rogers,Engineering,Engineer,107042,2019-11-10,9.7,13,Associate Degree,Chicago,Yes,12,2020-04-03,Low,46
+EMP1017,Amber Howard,HR,Engineer,42309,2018-11-29,2.8,10,Bachelor's,Boston,No,15,2024-03-11,Low,44
+EMP1018,Rodney Montgomery,Finance,Technician,126455,2017-07-05,6.4,28,Bachelor's,Boston,No,7,2023-04-28,High,37
+EMP1019,Linda Gonzalez,Engineering,Technician,147593,2022-08-09,3.7,13,PhD,New York,Yes,29,2023-11-13,High,52
+EMP1020,Lori Hanson,HR,Engineer,113948,2016-12-19,5.1,17,Associate Degree,San Francisco,No,31,2019-12-07,Medium,52
+EMP1021,Thomas Powers,Engineering,Director,73600,2019-06-29,5.2,8,Associate Degree,Austin,No,10,2023-03-21,High,54
+EMP1022,Marvin Clark,HR,Engineer,90472,2015-07-21,4.9,13,PhD,Seattle,Yes,24,2016-09-22,High,42
+EMP1023,Leslie Stewart,HR,Technician,100186,2020-02-13,1.7,29,Diploma,San Francisco,Yes,3,2023-03-06,Low,60
+EMP1024,Stephen Andrade,Operations,Specialist,122741,2023-12-07,2.8,1,Associate Degree,Austin,Yes,15,2024-05-31,Medium,55
+EMP1025,Jerry Hoffman,IT,Director,78375,2022-03-26,5.7,4,Associate Degree,Chicago,Yes,14,2024-04-20,Medium,56
+EMP1026,Sherri Hernandez,Marketing,Coordinator,80791,2018-08-12,7.4,12,Diploma,New York,Yes,16,2021-05-27,High,31
+EMP1027,Kimberly Shepard,Customer Support,Director,143087,2018-04-07,4.2,7,Bachelor's,Chicago,Yes,25,2020-01-25,Medium,43
+EMP1028,Cameron Rasmussen,Marketing,Director,55617,2017-09-09,9.4,15,Bachelor's,Los Angeles,Yes,16,2024-08-20,Low,47
+EMP1029,Ashley Murphy,IT,Manager,74668,2016-10-19,4.9,24,Associate Degree,Austin,No,39,2021-08-10,Low,34
+EMP1030,Christopher Turner,Sales,Analyst,51973,2021-07-04,6.9,18,Diploma,Los Angeles,Yes,23,2023-02-12,Medium,59
+EMP1031,Trevor Velez,Sales,Manager,66212,2023-12-27,9.2,12,Bachelor's,Austin,No,20,2025-01-15,High,47
+EMP1032,Diane Steele,HR,Technician,84391,2023-11-10,6.1,5,Bachelor's,Chicago,Yes,21,2024-03-03,Medium,58
+EMP1033,Diane Robinson,Legal,Director,103673,2020-06-24,9.5,29,Bachelor's,New York,No,35,2020-12-03,High,55
+EMP1034,Jessica Hernandez,Engineering,Specialist,69654,2018-10-08,8.2,3,PhD,Austin,No,21,2020-09-17,Low,44
+EMP1035,Barbara Meza,IT,Director,71844,2021-04-21,5.9,1,Bachelor's,New York,No,1,2022-10-28,Medium,47
+EMP1036,Ronald Holmes,Legal,Engineer,51224,2016-09-02,7.8,17,Master's,San Francisco,Yes,38,2018-01-23,Medium,51
+EMP1037,Matthew Hudson,Legal,Technician,129175,2018-05-19,2.7,14,PhD,San Francisco,Yes,36,2019-09-10,Low,51
+EMP1038,Katherine Phillips,Customer Support,Coordinator,45311,2019-04-02,3.6,16,Diploma,Chicago,Yes,45,2023-01-05,High,51
+EMP1039,Jenna Salinas,Engineering,Analyst,139306,2016-07-01,3.9,10,Associate Degree,Boston,No,11,2017-03-24,Low,51
+EMP1040,Monica West,HR,Coordinator,105640,2019-05-31,6.1,21,Associate Degree,Los Angeles,No,16,2020-04-15,Medium,36
+EMP1041,Jeffrey Moore,Customer Support,Analyst,46822,2021-01-13,8.9,3,Bachelor's,New York,Yes,24,2024-10-21,Low,44
+EMP1042,Christina Johnson,Operations,Coordinator,97064,2024-11-28,5.9,18,Master's,New York,Yes,32,2024-12-25,Low,31
+EMP1043,William Hogan,Finance,Technician,60238,2019-03-30,7.9,18,PhD,Boston,Yes,39,2024-08-04,Medium,44
+EMP1044,Matthew Jackson,Engineering,Consultant,84699,2024-02-22,6.2,2,PhD,Chicago,No,23,2024-10-25,Low,42
+EMP1045,Amanda Browning,Legal,Analyst,135956,2024-06-13,3.2,30,Bachelor's,Los Angeles,No,25,2025-01-04,High,51
+EMP1046,Russell Hogan,Engineering,Technician,71623,2015-07-20,7.1,25,PhD,San Francisco,No,41,2025-01-28,High,30
+EMP1047,Alexis Khan,Customer Support,Manager,95282,2016-07-15,3.8,2,Master's,Boston,No,16,2022-04-24,High,37
+EMP1048,Olivia Wilkinson,IT,Technician,77445,2024-06-14,1.5,16,PhD,Chicago,No,17,2024-08-11,High,50
+EMP1049,James Morgan,Engineering,Engineer,74220,2024-03-05,6.4,7,Associate Degree,Los Angeles,No,48,2024-06-19,Medium,41
+EMP1050,Troy May,HR,Director,51160,2018-03-14,2.4,12,Bachelor's,Chicago,No,49,2024-09-15,High,37
+EMP1051,Kirk Tucker,Customer Support,Specialist,149687,2018-05-10,8.2,25,Master's,New York,No,41,2020-04-25,Low,38
+EMP1052,Cody Phillips,Engineering,Technician,111161,2024-10-17,2.3,29,Master's,Austin,No,3,2024-10-24,Medium,46
+EMP1053,Veronica Thompson,Engineering,Engineer,73329,2020-06-07,7.3,20,Diploma,San Francisco,No,21,2023-04-10,Low,33
+EMP1054,Lori Nguyen,Marketing,Technician,56832,2023-09-30,9.1,27,PhD,Los Angeles,Yes,47,2024-03-24,High,46
+EMP1055,Jim Sullivan,Finance,Consultant,145150,2019-05-27,6.0,21,PhD,Boston,Yes,1,2024-08-25,Medium,39
+EMP1056,Kimberly Kerr,Marketing,Analyst,59215,2017-10-27,9.6,4,Associate Degree,Los Angeles,No,45,2022-12-31,High,34
+EMP1057,Sandra Valentine,Legal,Director,119442,2020-05-27,9.5,23,Diploma,Austin,Yes,33,2022-09-08,Medium,33
+EMP1058,Scott Brewer,Operations,Specialist,107010,2020-02-22,9.2,15,Diploma,Seattle,Yes,32,2024-03-31,Low,34
+EMP1059,Brian Thompson,Finance,Specialist,74881,2023-07-14,6.1,15,Master's,New York,No,3,2024-11-20,Medium,36
+EMP1060,Teresa Stone,IT,Coordinator,111965,2021-08-20,9.2,8,Associate Degree,Austin,No,3,2021-09-03,High,56
+EMP1061,Sarah Blackburn,Operations,Consultant,123887,2015-06-10,7.3,16,Bachelor's,Los Angeles,Yes,1,2016-02-05,High,39
+EMP1062,Heather Key,Customer Support,Technician,74288,2024-08-23,2.8,6,Master's,Los Angeles,No,37,2024-12-24,Medium,56
+EMP1063,Emily Gutierrez,Sales,Coordinator,149409,2020-07-18,4.2,18,PhD,San Francisco,Yes,11,2020-12-25,High,43
+EMP1064,George Garcia,Customer Support,Director,77586,2021-04-24,7.2,24,Diploma,Chicago,Yes,37,2023-08-30,Medium,33
+EMP1065,Nathan Sexton,Marketing,Engineer,95024,2024-01-28,4.6,29,Associate Degree,San Francisco,No,17,2024-07-10,Low,55
+EMP1066,Nicole Martin,Finance,Technician,134254,2017-10-12,1.9,10,Bachelor's,San Francisco,No,45,2024-02-05,Medium,49
+EMP1067,Mr. Jonathan Rogers III,Sales,Analyst,86373,2021-09-13,2.8,12,Associate Degree,Austin,Yes,28,2023-07-02,High,43
+EMP1068,Kayla Sanchez,Finance,Engineer,114178,2023-05-08,1.6,5,Bachelor's,Boston,Yes,4,2024-04-27,Medium,60
+EMP1069,Kayla Landry,Operations,Engineer,84162,2017-01-03,1.7,14,Master's,Austin,Yes,25,2019-01-29,High,36
+EMP1070,Edward Foster,Finance,Coordinator,147449,2015-07-03,1.6,26,Diploma,Austin,Yes,29,2023-11-13,Medium,55
+EMP1071,Robert Jones,Sales,Engineer,130783,2015-07-05,3.7,8,Associate Degree,San Francisco,No,17,2019-05-13,High,33
+EMP1072,Donna Haney,HR,Engineer,82465,2022-04-24,4.6,27,Master's,Los Angeles,Yes,48,2022-12-04,Medium,34
+EMP1073,Stephen Ramirez,Sales,Specialist,97995,2015-07-07,7.1,23,Master's,Los Angeles,Yes,27,2017-05-04,Low,58
+EMP1074,Johnathan Huber,Finance,Coordinator,124185,2015-07-21,2.2,10,Bachelor's,Boston,Yes,13,2016-07-22,Medium,32
+EMP1075,Mary Perez,Sales,Technician,132060,2015-09-19,9.7,1,Master's,Los Angeles,Yes,16,2018-09-03,Low,30
+EMP1076,John Yang,HR,Analyst,45940,2016-08-14,3.1,27,Associate Degree,New York,Yes,44,2021-04-25,Low,39
+EMP1077,Sandra Stone,Engineering,Manager,130729,2024-03-27,1.2,29,Associate Degree,Austin,Yes,0,2024-10-30,Medium,43
+EMP1078,Stephanie Francis,HR,Analyst,70295,2016-09-17,1.8,2,PhD,Seattle,Yes,17,2020-10-01,Low,34
+EMP1079,Jodi Mitchell,Finance,Director,58236,2024-03-15,8.0,1,PhD,Seattle,Yes,28,2024-03-25,High,32
+EMP1080,Daniel Henderson,Operations,Director,134254,2016-09-16,1.3,25,Associate Degree,Chicago,Yes,18,2022-05-01,High,41
+EMP1081,Theresa Bonilla,IT,Manager,49374,2021-11-10,1.6,27,Bachelor's,Seattle,Yes,27,2023-02-05,High,48
+EMP1082,Jody Moore,Engineering,Coordinator,122087,2023-10-04,3.2,3,Bachelor's,New York,No,11,2023-12-01,Low,39
+EMP1083,Samuel Edwards,IT,Specialist,43395,2017-12-18,3.5,9,Associate Degree,Austin,Yes,36,2024-02-19,Medium,41
+EMP1084,Olivia Garcia,HR,Specialist,147224,2020-08-20,5.3,23,PhD,Austin,Yes,21,2024-08-13,High,59
+EMP1085,Alyssa Smith,IT,Specialist,94761,2017-02-10,8.5,15,Bachelor's,New York,Yes,23,2024-08-15,Low,38
+EMP1086,Rachel Morrison,IT,Engineer,104863,2016-08-18,7.5,24,Master's,Austin,No,38,2021-09-19,Medium,50
+EMP1087,Tammy Salazar,Operations,Manager,65495,2015-07-03,8.8,28,Bachelor's,Los Angeles,No,45,2021-06-19,Low,58
+EMP1088,Ashley Vang,Finance,Coordinator,141588,2019-06-07,7.6,30,Bachelor's,Boston,No,0,2019-10-23,Low,44
+EMP1089,Linda Berg,Customer Support,Specialist,44954,2023-01-27,7.8,10,Associate Degree,Boston,No,40,2023-06-15,Medium,51
+EMP1090,Katherine Warner,HR,Manager,75262,2021-03-25,7.8,16,Bachelor's,Seattle,No,34,2024-01-26,Medium,53
+EMP1091,Kenneth Taylor,Legal,Technician,133225,2018-07-05,4.3,10,Bachelor's,Chicago,No,25,2023-08-28,Medium,47
+EMP1092,Mary Stewart,Operations,Engineer,117140,2017-09-02,1.7,6,Associate Degree,San Francisco,Yes,19,2020-04-24,Low,45
+EMP1093,Denise Edwards,Operations,Analyst,96686,2020-12-28,4.9,26,Associate Degree,Boston,Yes,11,2024-04-13,High,30
+EMP1094,Christine Campos,Operations,Specialist,111856,2018-06-17,6.5,2,Master's,Austin,No,7,2023-07-06,Medium,42
+EMP1095,Melissa Chavez,Operations,Consultant,97659,2022-10-27,3.7,4,Associate Degree,Austin,No,50,2023-04-02,Medium,39
+EMP1096,Jessica Bradshaw,Customer Support,Technician,46698,2021-02-01,5.3,6,Diploma,Chicago,Yes,24,2023-08-29,High,47
+EMP1097,Amanda Powers,IT,Manager,68252,2018-03-03,3.7,2,Bachelor's,Boston,No,21,2024-05-11,Low,45
+EMP1098,Christina Rivera,Marketing,Director,71545,2015-09-16,1.1,30,Bachelor's,Seattle,Yes,41,2016-05-02,High,47
+EMP1099,Alexandra Mills,Marketing,Engineer,100129,2016-05-02,9.1,25,Diploma,Boston,No,33,2019-08-08,High,31
+EMP1100,Jessica Shaw,Sales,Analyst,63921,2016-11-28,3.9,6,Associate Degree,Seattle,Yes,1,2020-12-10,High,46
+EMP1101,Katherine Franklin,Sales,Director,60825,2021-11-01,2.1,27,Associate Degree,San Francisco,Yes,45,2025-02-18,Medium,52
+EMP1102,Aaron Gutierrez,Sales,Technician,129166,2022-05-24,7.1,10,Diploma,New York,No,39,2022-07-19,Low,33
+EMP1103,Chase Newman,Engineering,Director,104303,2018-05-16,4.5,19,PhD,Seattle,No,12,2024-03-26,High,48
+EMP1104,Devon Martinez,Customer Support,Director,50698,2015-10-18,9.7,7,Associate Degree,Austin,Yes,12,2021-03-12,High,47
+EMP1105,Kathryn Mccoy,Finance,Manager,98214,2021-04-10,5.3,1,Diploma,Chicago,Yes,20,2022-04-23,Medium,38
+EMP1106,David Wilson,Customer Support,Engineer,62961,2015-03-09,7.9,27,Associate Degree,Seattle,No,18,2023-12-12,Low,44
+EMP1107,Erin Thompson,Marketing,Coordinator,78166,2023-09-04,2.3,5,Diploma,San Francisco,No,17,2024-12-17,High,39
+EMP1108,Jessica Ballard,Legal,Specialist,121352,2015-08-17,4.2,18,PhD,San Francisco,Yes,19,2024-08-21,Low,42
+EMP1109,Amanda Mccann,Operations,Coordinator,95729,2017-08-29,4.1,18,Diploma,Boston,No,32,2023-06-30,Medium,51
+EMP1110,Maurice Gill,Engineering,Manager,114259,2020-11-19,8.0,22,Master's,New York,No,43,2021-07-12,Medium,37
+EMP1111,Yvonne Werner,Marketing,Manager,40257,2020-05-07,5.2,15,PhD,Boston,Yes,0,2021-04-08,Medium,60
+EMP1112,Christine Robinson,Sales,Technician,147733,2023-01-21,2.0,29,Master's,San Francisco,Yes,43,2023-09-22,High,49
+EMP1113,Maria Cooper,Legal,Coordinator,138316,2022-10-12,6.6,7,Diploma,New York,Yes,48,2024-09-24,Low,30
+EMP1114,Rhonda Dawson,Legal,Engineer,70970,2017-05-08,1.4,11,PhD,Los Angeles,No,36,2024-04-02,Medium,55
+EMP1115,Crystal Mccormick,IT,Analyst,114674,2018-07-12,6.2,2,Master's,Los Angeles,No,36,2020-06-06,Low,44
+EMP1116,Steven Harris,Sales,Coordinator,148802,2016-04-26,8.1,8,Associate Degree,Los Angeles,No,42,2023-02-24,Medium,40
+EMP1117,Charlene Smith,Operations,Consultant,80569,2020-06-16,3.0,18,Associate Degree,Los Angeles,Yes,12,2025-01-02,Medium,33
+EMP1118,Keith Perez,Engineering,Analyst,119886,2022-03-23,6.8,1,Diploma,Los Angeles,No,1,2024-08-18,Medium,58
+EMP1119,Erin Bush,Finance,Consultant,117452,2023-09-28,9.6,22,Bachelor's,Seattle,Yes,48,2024-02-06,Low,59
+EMP1120,Michael Thompson,Engineering,Manager,125427,2019-09-07,8.6,10,Bachelor's,Austin,No,45,2021-10-12,Low,46
+EMP1121,Jonathan Franco,HR,Engineer,117023,2019-03-04,9.9,13,PhD,Seattle,Yes,10,2024-07-10,Low,56
+EMP1122,Craig Smith,Marketing,Specialist,112227,2020-05-29,8.1,28,PhD,Los Angeles,No,41,2020-11-14,High,54
+EMP1123,Daniel Mckenzie,Sales,Engineer,106597,2020-05-17,6.0,27,PhD,Los Angeles,Yes,34,2024-02-29,Low,56
+EMP1124,Melissa Calhoun MD,Engineering,Consultant,140585,2024-06-09,1.4,19,Diploma,San Francisco,Yes,23,2024-08-16,Medium,53
+EMP1125,Lisa Montoya,Customer Support,Coordinator,67086,2024-04-21,3.2,3,Bachelor's,Austin,Yes,40,2025-02-13,Low,49
+EMP1126,Christina Stewart,Sales,Manager,148252,2017-09-16,8.1,14,PhD,Chicago,Yes,2,2020-02-01,Medium,55
+EMP1127,Jennifer Weaver,Finance,Manager,102041,2016-03-08,5.5,26,Associate Degree,Austin,Yes,16,2017-11-04,High,45
+EMP1128,Carla Mccoy,Legal,Manager,43679,2024-08-29,6.0,3,Bachelor's,Seattle,Yes,42,2024-12-28,High,51
+EMP1129,Gregory Williams,IT,Coordinator,90932,2023-06-20,1.3,10,Bachelor's,Los Angeles,Yes,45,2024-09-25,Medium,55
+EMP1130,Tiffany Hall,Operations,Coordinator,129808,2024-08-19,3.3,4,Bachelor's,Austin,Yes,8,2025-01-14,High,55
+EMP1131,Megan Hall,IT,Analyst,110918,2020-10-24,4.0,5,Master's,Austin,Yes,46,2024-10-14,Medium,37
+EMP1132,Justin Williams,Engineering,Analyst,55404,2017-07-30,2.1,8,PhD,Austin,No,23,2023-04-21,Medium,36
+EMP1133,Deborah Owen,Legal,Coordinator,43732,2016-02-05,5.4,24,Associate Degree,Boston,No,24,2020-08-07,High,51
+EMP1134,Danielle Davis,Finance,Specialist,87585,2023-02-23,3.2,20,PhD,New York,No,30,2023-07-27,Low,55
+EMP1135,David Foster,Legal,Technician,147179,2023-10-04,5.0,20,Associate Degree,Los Angeles,No,3,2024-06-23,Low,38
+EMP1136,Paul Scott,Operations,Analyst,58166,2020-08-25,6.3,16,Associate Degree,Los Angeles,Yes,44,2024-03-28,Medium,31
+EMP1137,Todd Mccarty,Legal,Manager,69600,2022-05-15,2.5,17,Bachelor's,Boston,Yes,33,2023-11-24,High,51
+EMP1138,Jade Wallace,Sales,Coordinator,49404,2019-05-25,9.6,3,Diploma,New York,No,31,2024-08-18,Medium,31
+EMP1139,Mary Simon,Customer Support,Director,76568,2021-07-14,7.2,27,Master's,San Francisco,Yes,38,2024-03-27,Low,52
+EMP1140,Madison Booth,Operations,Director,81652,2020-04-23,6.0,23,Associate Degree,Los Angeles,No,48,2020-09-30,High,60
+EMP1141,Virginia Santos,Engineering,Technician,106259,2015-11-10,2.9,30,Diploma,San Francisco,Yes,10,2021-02-26,Medium,46
+EMP1142,Ronald Bradley,Sales,Coordinator,43813,2025-02-05,3.6,19,Associate Degree,Austin,No,29,2025-02-19,Low,60
+EMP1143,William Barker,Legal,Coordinator,88567,2017-08-18,4.6,20,Bachelor's,Boston,No,26,2022-01-11,Low,45
+EMP1144,Theresa Long,Customer Support,Coordinator,108597,2016-03-08,6.2,27,PhD,Chicago,Yes,30,2025-01-28,Medium,57
+EMP1145,Amy Mckinney,Finance,Engineer,119775,2015-07-13,1.6,27,PhD,Seattle,Yes,37,2022-09-06,High,54
+EMP1146,Anthony Merritt,Operations,Consultant,44362,2022-11-29,2.7,29,Diploma,Los Angeles,No,22,2023-06-27,Medium,47
+EMP1147,Steven Murphy,Legal,Consultant,96599,2015-08-29,1.4,15,Associate Degree,New York,Yes,44,2018-06-29,Low,32
+EMP1148,Tara Evans,Customer Support,Director,93395,2020-06-28,5.1,13,Diploma,New York,No,45,2020-08-02,Low,33
+EMP1149,Sarah Wells,Sales,Engineer,100259,2017-02-08,9.2,16,Bachelor's,Austin,No,45,2020-07-27,High,32
+EMP1150,Patricia Curtis,Marketing,Consultant,84439,2020-06-12,9.0,9,Master's,New York,No,8,2023-09-11,High,41
+EMP1151,Joshua Kirk,Sales,Analyst,121358,2023-06-03,8.1,21,Bachelor's,Los Angeles,Yes,42,2024-09-30,Low,58
+EMP1152,Troy Turner,Marketing,Manager,136514,2017-10-25,2.7,27,PhD,Austin,Yes,24,2018-08-15,Medium,35
+EMP1153,Nicholas Smith,HR,Manager,66193,2017-07-03,1.3,16,Master's,New York,Yes,46,2024-04-10,High,44
+EMP1154,Michael Brown,Marketing,Engineer,72265,2024-03-16,5.4,20,Bachelor's,Chicago,No,37,2024-04-20,Medium,45
+EMP1155,Brian Williams,Operations,Engineer,85412,2023-04-24,4.7,1,Diploma,Boston,Yes,47,2024-07-19,High,31
+EMP1156,Katherine Johnson,Sales,Technician,122687,2023-02-11,7.5,18,Diploma,Seattle,No,9,2023-09-24,Medium,39
+EMP1157,Megan Santana,IT,Director,115250,2023-10-01,8.0,28,Bachelor's,New York,Yes,37,2024-01-18,Medium,47
+EMP1158,Curtis Potts,Sales,Engineer,140612,2019-06-21,2.2,8,Associate Degree,San Francisco,Yes,27,2021-12-17,High,45
+EMP1159,Michael Hoffman,Sales,Coordinator,132359,2018-03-16,2.2,12,Diploma,Boston,Yes,38,2019-08-15,High,38
+EMP1160,Tanya Quinn,Finance,Coordinator,88810,2025-02-09,4.0,18,Associate Degree,Los Angeles,Yes,12,2025-02-09,High,31
+EMP1161,Craig Coffey,Operations,Technician,43911,2017-05-30,4.0,22,PhD,Seattle,No,15,2021-10-07,Medium,52
+EMP1162,Melanie Alvarado,HR,Manager,68321,2021-06-13,8.4,3,Diploma,Boston,No,50,2022-05-23,Low,52
+EMP1163,Chelsey Miller,Marketing,Director,58250,2022-07-25,6.3,1,Master's,Boston,No,27,2024-08-20,High,32
+EMP1164,Ryan Bell,IT,Technician,70586,2017-08-10,8.9,2,Bachelor's,Seattle,No,40,2020-07-24,High,56
+EMP1165,Jeanne Martin,Engineering,Consultant,100162,2020-11-23,8.9,10,Master's,Chicago,Yes,21,2022-11-23,Low,33
+EMP1166,Oscar Bond,Operations,Technician,77990,2017-07-27,4.2,3,PhD,Los Angeles,Yes,37,2023-05-14,Low,44
+EMP1167,Tyrone Phillips,Sales,Specialist,134006,2024-09-26,9.7,3,Associate Degree,Los Angeles,Yes,23,2024-12-29,High,50
+EMP1168,James Rodriguez,Engineering,Engineer,120654,2020-02-11,6.5,21,Master's,Los Angeles,Yes,41,2024-04-22,Low,30
+EMP1169,Lindsay French,HR,Coordinator,119782,2021-01-20,2.6,9,PhD,Seattle,Yes,5,2021-06-28,Low,40
+EMP1170,Todd Jenkins,Finance,Technician,106243,2021-08-11,9.4,20,Diploma,Chicago,Yes,46,2022-04-20,Low,51
+EMP1171,Janice Garcia,HR,Director,119833,2023-02-21,6.2,2,Bachelor's,Chicago,Yes,20,2023-06-13,Medium,37
+EMP1172,Angela Moore,Operations,Specialist,76701,2016-04-23,9.3,13,Master's,Boston,Yes,32,2024-05-14,Medium,49
+EMP1173,Sharon Lewis,HR,Specialist,97939,2019-09-28,2.1,11,Master's,New York,No,15,2024-04-04,Medium,30
+EMP1174,Michelle Saunders,HR,Specialist,118828,2022-09-25,8.2,14,Master's,New York,No,48,2022-09-26,Medium,43
+EMP1175,Emily Rocha,Legal,Specialist,101823,2023-12-08,8.4,10,Diploma,Los Angeles,No,30,2024-11-10,High,56
+EMP1176,Natasha Wright,IT,Analyst,73965,2021-09-14,6.2,10,Associate Degree,Los Angeles,Yes,45,2023-07-07,Low,45
+EMP1177,Patricia Fletcher,Finance,Analyst,66182,2022-06-06,6.5,29,Bachelor's,New York,Yes,22,2023-07-12,Medium,46
+EMP1178,Elizabeth Russo,Sales,Director,136323,2020-01-22,1.9,11,Diploma,Chicago,No,38,2024-03-26,Low,38
+EMP1179,Bridget Payne,Finance,Technician,70490,2023-05-11,9.4,24,Master's,New York,Yes,12,2023-06-29,Medium,33
+EMP1180,Elizabeth Tucker,Legal,Technician,113518,2023-06-22,1.5,1,Associate Degree,Boston,No,11,2024-01-20,High,51
+EMP1181,Robert Walker,Marketing,Specialist,99435,2018-08-03,1.3,15,Bachelor's,San Francisco,Yes,35,2020-01-29,Medium,57
+EMP1182,Nicole Harvey,Operations,Consultant,115678,2020-07-08,7.3,24,Bachelor's,Boston,No,43,2024-09-09,Low,42
+EMP1183,Alexandria Price,Legal,Coordinator,129209,2021-07-21,5.3,8,PhD,Boston,Yes,23,2022-03-24,Low,57
+EMP1184,Rebecca Aguilar,Customer Support,Manager,48158,2022-09-20,3.0,24,Diploma,New York,No,32,2024-12-25,High,54
+EMP1185,Elizabeth Hill,Finance,Manager,148822,2024-06-06,7.6,6,Master's,Austin,No,35,2024-07-16,Medium,41
+EMP1186,Barbara Delgado,Finance,Analyst,78559,2017-02-06,4.5,8,Associate Degree,Boston,Yes,26,2024-07-03,Medium,49
+EMP1187,Ronald Mcdonald,Sales,Director,103059,2019-02-02,4.2,27,PhD,Chicago,No,38,2020-01-29,Medium,43
+EMP1188,David Beasley,Legal,Technician,106069,2023-10-14,8.0,21,Associate Degree,Los Angeles,No,0,2024-10-30,Low,59
+EMP1189,Jamie Mendez,IT,Technician,89171,2022-06-05,5.8,9,Bachelor's,Seattle,Yes,24,2023-09-07,High,40
+EMP1190,Todd Brown,Marketing,Specialist,132095,2020-01-21,2.1,22,PhD,New York,No,20,2021-11-15,Low,56
+EMP1191,Jason Gomez,Sales,Manager,60351,2020-08-19,6.6,22,Master's,Austin,Yes,27,2022-01-21,Medium,37
+EMP1192,William Miller,Customer Support,Manager,126041,2024-02-11,1.8,6,Master's,Seattle,Yes,20,2024-08-19,Medium,50
+EMP1193,Natalie Miller,Legal,Analyst,131023,2016-04-30,8.9,19,Bachelor's,Los Angeles,Yes,19,2018-04-10,Low,38
+EMP1194,Samantha Larson,HR,Director,144058,2020-12-18,7.3,10,Diploma,San Francisco,No,26,2022-08-09,Medium,50
+EMP1195,Nichole Mcgee,Engineering,Analyst,138889,2015-11-10,6.2,21,Diploma,Los Angeles,Yes,39,2017-10-26,Medium,32
+EMP1196,Thomas Lee,Legal,Director,127103,2018-09-03,5.6,22,Diploma,Chicago,No,44,2019-09-11,High,56
+EMP1197,Corey Paul,IT,Specialist,102579,2022-12-13,1.6,29,Diploma,Boston,Yes,24,2023-12-03,Medium,51
+EMP1198,Benjamin Day,Sales,Coordinator,89876,2016-01-16,3.8,18,Bachelor's,San Francisco,Yes,27,2025-01-06,Medium,47
+EMP1199,Monica Wilson,Operations,Specialist,68416,2022-11-21,5.4,18,PhD,San Francisco,Yes,20,2023-06-02,Medium,51
+EMP1200,Ashlee Green,Operations,Consultant,50623,2020-07-31,4.3,6,PhD,Los Angeles,Yes,24,2023-04-30,High,30
+EMP1201,Andrew Cochran,Operations,Engineer,45611,2023-09-15,4.6,14,Bachelor's,Austin,Yes,12,2024-09-17,Low,41
+EMP1202,Lindsey Young,Customer Support,Specialist,112603,2019-11-17,9.9,21,Associate Degree,Chicago,Yes,19,2020-07-23,High,56
+EMP1203,Dennis Hatfield,Marketing,Specialist,77717,2016-09-26,9.1,15,Diploma,Austin,Yes,27,2017-09-18,High,44
+EMP1204,Angel Wilcox,Sales,Technician,115784,2019-01-23,2.2,18,Associate Degree,San Francisco,Yes,12,2024-09-27,Medium,60
+EMP1205,Jerry Mathews,Marketing,Coordinator,89641,2020-03-18,3.4,14,Diploma,Los Angeles,No,47,2025-01-10,Low,59
+EMP1206,Andrew Ramirez,Engineering,Director,83430,2015-04-29,3.6,20,Master's,Los Angeles,Yes,25,2023-12-28,High,46
+EMP1207,Jamie Doyle,Operations,Technician,76382,2021-12-20,6.6,19,Associate Degree,Los Angeles,No,14,2023-04-25,High,49
+EMP1208,Todd Henderson,IT,Coordinator,124696,2017-05-06,1.3,7,Associate Degree,New York,Yes,31,2021-07-03,Medium,52
+EMP1209,Julie Lowe,Engineering,Manager,114714,2021-04-20,9.0,12,Diploma,New York,No,30,2022-11-18,Medium,43
+EMP1210,Shelia Ruiz,Customer Support,Engineer,46343,2022-09-02,3.0,5,Associate Degree,Boston,Yes,27,2023-01-27,Low,40
+EMP1211,Patricia Hernandez,Engineering,Manager,95290,2015-07-02,5.6,12,Master's,San Francisco,No,32,2016-07-08,High,60
+EMP1212,Randy Lamb,Sales,Director,127859,2019-05-10,5.4,14,Associate Degree,New York,No,36,2020-09-25,Low,46
+EMP1213,Alan Miller Jr.,Sales,Coordinator,100199,2019-12-27,5.5,15,Associate Degree,San Francisco,Yes,34,2020-12-14,Low,51
+EMP1214,Kevin Keller,Sales,Manager,114017,2016-03-13,3.5,22,PhD,San Francisco,Yes,4,2024-07-23,High,40
+EMP1215,Darren Leon,Sales,Coordinator,56267,2024-01-10,6.4,26,Diploma,New York,Yes,21,2024-06-08,Low,59
+EMP1216,Tamara Juarez,HR,Consultant,105368,2023-08-02,8.1,29,Diploma,San Francisco,Yes,34,2024-05-16,Medium,35
+EMP1217,Vanessa Cherry,Engineering,Analyst,70311,2016-04-27,7.0,20,Diploma,Los Angeles,No,23,2021-10-16,Medium,58
+EMP1218,Laura Martin,Legal,Coordinator,63467,2021-01-04,8.9,14,PhD,New York,Yes,0,2023-07-13,Medium,46
+EMP1219,Jeffery Rogers,Engineering,Manager,59435,2016-06-25,1.0,10,Master's,Chicago,No,33,2017-02-10,Low,32
+EMP1220,Danielle Martin,Marketing,Specialist,53015,2020-11-16,1.1,6,Diploma,Los Angeles,No,4,2024-05-25,Low,48
+EMP1221,Emily Young,Finance,Specialist,121822,2019-12-04,5.5,8,Associate Degree,Boston,Yes,44,2022-04-29,Low,41
+EMP1222,Michelle Thompson,Legal,Coordinator,101781,2024-03-19,7.3,14,Master's,Los Angeles,Yes,1,2024-09-09,Medium,43
+EMP1223,Rebecca Salazar,Sales,Coordinator,48224,2020-01-20,9.2,26,Associate Degree,Seattle,Yes,35,2024-02-27,Low,55
+EMP1224,Kathryn Reed,Customer Support,Director,83133,2021-07-13,1.5,26,Bachelor's,Austin,No,12,2023-04-06,Low,39
+EMP1225,Autumn Norris,Customer Support,Coordinator,146088,2021-06-13,5.7,19,Diploma,New York,Yes,48,2022-06-27,Low,56
+EMP1226,Jamie Reyes,Sales,Specialist,46879,2018-02-27,9.2,25,Diploma,Los Angeles,Yes,45,2020-04-01,Medium,58
+EMP1227,Paul Garcia,Marketing,Analyst,77545,2023-08-31,7.8,7,PhD,Los Angeles,Yes,30,2023-11-01,Medium,38
+EMP1228,Nancy Cole,Legal,Specialist,62121,2023-03-28,7.0,30,PhD,New York,No,18,2023-11-26,High,54
+EMP1229,Kyle Perkins,Sales,Coordinator,99036,2024-12-21,5.4,1,Master's,Los Angeles,No,20,2024-12-22,High,31
+EMP1230,Paul Obrien,IT,Engineer,144139,2020-10-01,3.9,28,Associate Degree,Chicago,No,3,2024-01-01,High,35
+EMP1231,Melissa Delacruz,Customer Support,Engineer,111249,2023-07-13,2.5,25,Diploma,New York,Yes,47,2023-09-28,High,57
+EMP1232,Linda Barnes,IT,Analyst,121113,2017-09-20,9.8,25,Master's,Austin,No,23,2018-11-29,High,55
+EMP1233,Christina Potts,Engineering,Coordinator,51058,2024-07-16,1.5,29,Associate Degree,Los Angeles,No,46,2025-02-15,Medium,57
+EMP1234,Crystal Schaefer,Legal,Director,128496,2023-10-28,1.7,4,Master's,Seattle,No,23,2024-06-08,High,52
+EMP1235,Tracy Dickerson,Legal,Analyst,87739,2017-07-28,1.9,29,Master's,Boston,No,5,2024-04-23,High,59
+EMP1236,Kara Lewis,Legal,Technician,52526,2019-12-30,6.8,12,Diploma,New York,No,21,2024-01-24,High,37
+EMP1237,Madison Luna,Operations,Consultant,108240,2017-01-25,4.8,5,Associate Degree,San Francisco,Yes,16,2019-08-01,High,55
+EMP1238,Brandy Stanley,Sales,Specialist,65547,2018-01-04,4.9,24,PhD,New York,Yes,40,2021-12-26,High,59
+EMP1239,Deborah Moore,Legal,Analyst,40606,2020-11-20,6.7,1,PhD,Chicago,Yes,9,2023-06-19,Low,53
+EMP1240,Donald Long,Sales,Consultant,69139,2024-10-18,5.3,24,Bachelor's,Chicago,No,40,2024-12-08,Medium,51
+EMP1241,Diana Mcdonald,Sales,Consultant,120411,2017-01-20,1.9,27,Associate Degree,Chicago,Yes,35,2022-02-23,Medium,52
+EMP1242,Beth Smith,Legal,Director,101212,2018-06-05,1.1,19,Bachelor's,Austin,No,21,2024-04-28,Low,42
+EMP1243,James Smith,IT,Technician,63700,2023-02-09,8.3,15,Bachelor's,Los Angeles,No,9,2024-08-16,High,30
+EMP1244,Julie Jones,Finance,Technician,74981,2021-10-29,5.6,20,PhD,Seattle,No,46,2022-08-21,Medium,52
+EMP1245,Audrey Eaton,Marketing,Analyst,42186,2021-03-13,7.1,22,Associate Degree,Chicago,No,25,2022-03-04,Medium,35
+EMP1246,Christopher Pruitt,HR,Engineer,106387,2017-04-10,7.4,27,Bachelor's,New York,Yes,16,2021-10-24,Medium,46
+EMP1247,Haley Charles,Marketing,Manager,56660,2021-11-26,6.0,19,Bachelor's,New York,No,26,2024-09-20,High,58
+EMP1248,Mitchell Jones,Engineering,Technician,130163,2017-09-28,6.5,3,Bachelor's,Austin,No,33,2019-07-09,Medium,32
+EMP1249,Ricky Marshall,IT,Coordinator,97629,2017-11-13,6.8,17,Associate Degree,Austin,Yes,12,2024-09-16,Low,39
+EMP1250,Robert Patel,Legal,Analyst,106538,2017-01-03,9.5,8,Diploma,Los Angeles,Yes,21,2023-03-30,Low,40
+EMP1251,Maria Mcgrath,Legal,Technician,112244,2023-11-06,1.3,7,Master's,San Francisco,Yes,38,2024-09-06,Medium,39
+EMP1252,Jessica Martinez,Engineering,Coordinator,40790,2021-10-03,6.0,3,Bachelor's,Seattle,Yes,49,2023-07-08,High,49
+EMP1253,Erika Lewis,Marketing,Analyst,95464,2024-06-28,5.9,20,Master's,Los Angeles,No,37,2024-09-23,Medium,33
+EMP1254,Robert Kent,Finance,Manager,94093,2020-05-03,3.7,15,Associate Degree,Chicago,Yes,6,2022-02-16,High,34
+EMP1255,Jenny Davis,Sales,Coordinator,88651,2020-09-22,2.8,9,Associate Degree,Seattle,Yes,8,2021-12-08,Low,37
+EMP1256,Lisa Wong,Marketing,Director,63140,2015-05-16,2.5,8,Bachelor's,Los Angeles,No,49,2017-09-16,Low,60
+EMP1257,John Stewart,HR,Consultant,94779,2018-07-08,1.7,14,PhD,Chicago,Yes,6,2024-10-27,Low,54
+EMP1258,Christopher Kelly,Customer Support,Specialist,123039,2021-06-25,4.5,14,Diploma,New York,No,42,2024-05-13,High,41
+EMP1259,Janice Short,HR,Analyst,57240,2022-11-17,6.2,25,Bachelor's,San Francisco,Yes,17,2024-08-31,Low,32
+EMP1260,Scott Ford,Engineering,Analyst,42121,2022-10-13,1.7,10,Master's,Los Angeles,No,38,2023-09-02,Medium,47
+EMP1261,Michael Rodriguez,Sales,Manager,128314,2025-01-20,8.3,26,Diploma,Seattle,Yes,19,2025-02-14,Low,49
+EMP1262,Holly Perez,Finance,Engineer,148245,2015-09-09,3.8,11,PhD,San Francisco,No,20,2020-04-07,High,58
+EMP1263,James Krueger,Legal,Analyst,90027,2024-06-21,6.8,15,Associate Degree,Austin,No,5,2024-08-08,High,46
+EMP1264,Anna Carroll,Sales,Analyst,46567,2020-04-18,3.3,22,Bachelor's,Chicago,No,30,2022-10-21,Low,30
+EMP1265,Steven Vasquez,Legal,Director,62875,2024-08-09,9.2,1,Bachelor's,San Francisco,No,35,2025-02-20,High,42
+EMP1266,Suzanne Rodriguez,Legal,Director,124396,2022-07-12,6.1,26,Associate Degree,Austin,No,47,2023-03-01,Medium,50
+EMP1267,Scott Burns,Finance,Manager,125581,2024-09-10,6.7,9,Bachelor's,Los Angeles,Yes,28,2024-10-30,Low,47
+EMP1268,Samantha Harper,Customer Support,Manager,62034,2016-10-01,3.1,23,Associate Degree,Austin,No,24,2020-09-12,Medium,55
+EMP1269,Alexis Howe,IT,Technician,40950,2015-02-26,2.6,30,Bachelor's,San Francisco,Yes,43,2018-04-12,Low,45
+EMP1270,Melissa Riddle,Engineering,Director,51404,2022-12-25,3.5,10,Bachelor's,Chicago,No,21,2025-02-21,Medium,36
+EMP1271,Benjamin Wood,Operations,Manager,124062,2023-10-23,4.7,10,Associate Degree,Boston,No,13,2024-07-24,High,44
+EMP1272,Thomas Byrd,Engineering,Director,111200,2021-04-03,3.8,17,Master's,Boston,Yes,44,2023-03-20,High,35
+EMP1273,Alexander Larson,Engineering,Engineer,111816,2016-03-26,3.3,21,Bachelor's,Chicago,No,41,2018-08-04,High,50
+EMP1274,Christopher Nguyen,Legal,Coordinator,132499,2023-04-17,8.1,8,Associate Degree,Seattle,No,35,2024-02-05,High,55
+EMP1275,Nicholas Little,Finance,Specialist,138042,2015-11-13,6.3,15,Master's,Boston,No,29,2016-04-24,Low,51
+EMP1276,Madison Moore,HR,Coordinator,72931,2016-05-19,5.9,2,Associate Degree,Seattle,No,15,2019-12-15,Medium,35
+EMP1277,Jonathan Gonzales,Finance,Analyst,78880,2019-06-26,4.4,6,Master's,Los Angeles,Yes,29,2022-03-30,High,47
+EMP1278,Jennifer Jones,Legal,Manager,107652,2015-07-11,2.1,26,Master's,Los Angeles,Yes,13,2019-09-21,High,35
+EMP1279,Ashley Campbell,Legal,Coordinator,79196,2017-04-27,6.8,6,PhD,Chicago,No,9,2020-03-27,Low,33
+EMP1280,Michael Torres,Legal,Specialist,72534,2022-01-30,1.2,21,Bachelor's,Boston,Yes,38,2024-02-18,Low,48
+EMP1281,Lisa Smith,Engineering,Specialist,77628,2021-09-29,5.6,2,Associate Degree,Seattle,Yes,50,2023-02-25,Low,47
+EMP1282,Jose Edwards,Marketing,Coordinator,108581,2015-08-05,2.1,22,PhD,Boston,No,3,2021-03-18,Medium,60
+EMP1283,Sharon Ray,HR,Technician,119472,2020-02-16,2.3,14,Bachelor's,New York,Yes,35,2021-12-17,Low,58
+EMP1284,Jessica Thomas,IT,Analyst,56114,2016-04-19,2.0,5,Diploma,Los Angeles,No,39,2018-08-07,High,40
+EMP1285,Diane Jensen,Customer Support,Engineer,128188,2018-12-05,9.7,15,Associate Degree,Los Angeles,No,39,2023-08-29,High,31
+EMP1286,Teresa Rose,Finance,Specialist,123567,2024-08-08,8.2,29,Diploma,San Francisco,No,31,2024-08-23,Medium,50
+EMP1287,Jennifer Newman,Operations,Analyst,72617,2022-11-20,1.7,9,Associate Degree,San Francisco,No,23,2022-12-22,Medium,32
+EMP1288,Samantha Mills,Engineering,Manager,138022,2022-11-23,1.8,23,Bachelor's,Chicago,No,41,2024-03-21,High,39
+EMP1289,Mr. William Salinas,Marketing,Manager,87699,2018-06-16,9.0,6,Diploma,Austin,No,8,2019-06-22,Medium,40
+EMP1290,Brenda Cox,Sales,Manager,121879,2016-07-30,1.1,5,Associate Degree,Boston,Yes,14,2017-03-02,High,48
+EMP1291,Carol Allen,Marketing,Technician,53051,2019-09-07,4.7,15,Master's,Boston,Yes,12,2022-03-21,Medium,45
+EMP1292,Andrew Le,IT,Engineer,120319,2016-01-11,3.2,18,Diploma,Austin,Yes,47,2024-03-22,Low,31
+EMP1293,Mr. Charles Thomas DVM,HR,Specialist,61778,2022-02-17,4.7,16,Diploma,Chicago,Yes,3,2023-04-20,Low,30
+EMP1294,Jason Sanchez,Finance,Specialist,68479,2022-10-04,6.8,1,Diploma,San Francisco,No,2,2024-06-30,Medium,38
+EMP1295,Kathryn Thomas,Legal,Specialist,65291,2018-01-05,5.3,6,Diploma,Boston,Yes,50,2023-02-13,Medium,33
+EMP1296,Clifford Anderson,Customer Support,Engineer,126227,2023-06-24,2.7,29,Associate Degree,Boston,No,49,2024-12-22,Medium,33
+EMP1297,Mary Myers,Operations,Coordinator,50859,2015-12-25,6.8,12,PhD,Seattle,Yes,35,2021-10-07,Medium,56
+EMP1298,Whitney Ramsey,HR,Engineer,115859,2019-02-28,1.4,5,Diploma,Los Angeles,Yes,4,2019-07-09,Medium,44
+EMP1299,Keith Jordan,Customer Support,Consultant,123476,2018-10-20,7.9,1,Master's,Chicago,No,17,2019-05-12,Low,56

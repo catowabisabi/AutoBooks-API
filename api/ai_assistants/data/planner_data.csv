@@ -1,0 +1,21 @@
+event_id,type,title,description,date,time,duration_minutes,participants,status,priority,assigned_to
+2001,meeting,Weekly Team Standup,Regular team update meeting,2025-02-24,09:00,30,"John Smith, Emily Brown, Michael Davis, Sarah Johnson",scheduled,medium,Sarah Johnson
+2002,meeting,Product Review,Review new product features,2025-02-25,14:00,60,"Robert Taylor, Jessica Lee, Sarah Johnson, David Wilson",scheduled,high,Robert Taylor
+2003,task,Debug API Issue,Fix authentication bug in API endpoint,2025-02-26,10:00,240,NA,in_progress,high,Emily Brown
+2004,task,Update Documentation,Update API documentation for v2.0,2025-02-27,13:00,180,NA,pending,medium,Michael Davis
+2005,meeting,Client Presentation,Present new features to client,2025-02-27,15:00,90,"David Wilson, Robert Taylor, Thomas Wright",scheduled,high,David Wilson
+2006,task,Code Review,Review pull requests from dev team,2025-02-28,09:30,120,NA,pending,medium,John Smith
+2007,meeting,Marketing Strategy,Discuss Q2 marketing strategy,2025-03-01,11:00,60,"Thomas Wright, Amanda Martin, James Thompson, Mary Anderson",scheduled,medium,Thomas Wright
+2008,task,Expense Reports,Submit monthly expense reports,2025-03-01,14:00,60,NA,pending,low,All Employees
+2009,meeting,Board Meeting,Monthly board meeting,2025-03-02,09:00,120,"Mary Anderson, David Wilson, Kevin Miller, Patricia Clark",scheduled,high,Mary Anderson
+2010,task,Performance Reviews,Complete Q1 performance reviews,2025-03-03,10:00,240,NA,pending,high,Sarah Johnson
+2011,meeting,UI/UX Workshop,Workshop on new design system,2025-03-04,13:00,180,"Jessica Lee, William Johnson, Olivia Adams",scheduled,medium,Jessica Lee
+2012,task,Security Audit,Perform quarterly security audit,2025-03-05,09:00,480,NA,pending,high,Michael Davis
+2013,meeting,Finance Review,Monthly financial review,2025-03-05,14:00,90,"Kevin Miller, Mary Anderson, Matthew Roberts",scheduled,high,Kevin Miller
+2014,task,Content Calendar,Prepare content calendar for March,2025-02-26,11:00,120,NA,in_progress,medium,James Thompson
+2015,meeting,HR Training,New compliance training session,2025-03-06,10:00,120,"Patricia Clark, Lisa Garcia, All Departments",scheduled,medium,Patricia Clark
+2016,task,Data Migration,Migrate user data to new database,2025-03-01,09:00,300,NA,pending,high,Daniel White
+2017,meeting,Product Roadmap,Q2 product roadmap planning,2025-03-07,13:00,180,"Robert Taylor, Sophia Martinez, David Wilson, Sarah Johnson",scheduled,high,Robert Taylor
+2018,task,Frontend Update,Implement new UI components,2025-02-27,10:00,300,NA,in_progress,medium,William Johnson
+2019,meeting,Social Media Campaign,Review upcoming social campaign,2025-03-03,15:30,60,"Olivia Adams, Thomas Wright, Amanda Martin",scheduled,medium,Olivia Adams
+2020,task,Financial Forecasting,Prepare Q2 financial forecasts,2025-03-08,09:00,240,NA,pending,high,Matthew Roberts
