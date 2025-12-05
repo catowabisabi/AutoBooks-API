@@ -1,18 +1,27 @@
-# from rest_framework.routers import DefaultRouter
-# from .views import DashboardViewSet, ChartViewSet
-#
-# router = DefaultRouter()
-# router.register(r'dashboards', DashboardViewSet, basename='dashboard')
-# router.register(r'charts', ChartViewSet, basename='chart')
-#
-# urlpatterns = router.urls
+"""
+Analytics Module URL Configuration
+"""
 
-
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import DashboardViewSet, ChartViewSet
+from .views import (
+    DashboardViewSet,
+    ChartViewSet,
+    AnalyticsSalesViewSet,
+    KPIMetricViewSet,
+    ReportScheduleViewSet,
+    AnalyticsDashboardView,
+)
 
 router = DefaultRouter()
-router.register(r'dashboards', DashboardViewSet)
-router.register(r'charts', ChartViewSet)
+router.register(r'dashboards', DashboardViewSet, basename='dashboard')
+router.register(r'charts', ChartViewSet, basename='chart')
+router.register(r'sales', AnalyticsSalesViewSet, basename='analytics-sales')
+router.register(r'kpis', KPIMetricViewSet, basename='kpi')
+router.register(r'report-schedules', ReportScheduleViewSet, basename='report-schedule')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('', include(router.urls)),
+    path('overview/', AnalyticsDashboardView.as_view(), name='analytics-overview'),
+]
+

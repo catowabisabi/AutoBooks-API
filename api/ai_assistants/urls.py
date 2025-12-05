@@ -18,6 +18,7 @@ from ai_assistants.views.document_viewset import (
 )
 from ai_assistants.views.finance_viewset import ReceiptAnalyzerViewSet
 from ai_assistants.views.ai_service_viewset import AIServiceViewSet
+from ai_assistants.views.accounting_viewset import AccountingAssistantViewSet
 
 # Router for viewsets
 router = DefaultRouter()
@@ -50,4 +51,48 @@ urlpatterns = [
     # Finance Assistant
     path("finance-assistant/analyze/", ReceiptAnalyzerViewSet.as_view({"post": "analyze_receipt"}),
          name="finance-assistant-analyze"),
+    
+    # Accounting Assistant / 會計助手
+    path("accounting-assistant/upload/", 
+         AccountingAssistantViewSet.as_view({"post": "upload_receipt"}), 
+         name="accounting-assistant-upload"),
+    path("accounting-assistant/receipts/", 
+         AccountingAssistantViewSet.as_view({"get": "list_receipts"}), 
+         name="accounting-assistant-receipts"),
+    path("accounting-assistant/receipts/<uuid:pk>/", 
+         AccountingAssistantViewSet.as_view({"get": "get_receipt", "patch": "update_receipt"}), 
+         name="accounting-assistant-receipt-detail"),
+    path("accounting-assistant/receipts/<uuid:pk>/approve/", 
+         AccountingAssistantViewSet.as_view({"post": "approve_receipt"}), 
+         name="accounting-assistant-approve"),
+    path("accounting-assistant/receipts/<uuid:pk>/create-journal/", 
+         AccountingAssistantViewSet.as_view({"post": "create_journal_entry"}), 
+         name="accounting-assistant-create-journal"),
+    path("accounting-assistant/receipts/<uuid:pk>/ai-review/", 
+         AccountingAssistantViewSet.as_view({"post": "ai_review_receipt"}), 
+         name="accounting-assistant-ai-review"),
+    path("accounting-assistant/compare/", 
+         AccountingAssistantViewSet.as_view({"post": "compare_excel"}), 
+         name="accounting-assistant-compare"),
+    path("accounting-assistant/comparisons/", 
+         AccountingAssistantViewSet.as_view({"get": "list_comparisons"}), 
+         name="accounting-assistant-comparisons"),
+    path("accounting-assistant/reports/create/", 
+         AccountingAssistantViewSet.as_view({"post": "create_report"}), 
+         name="accounting-assistant-create-report"),
+    path("accounting-assistant/reports/", 
+         AccountingAssistantViewSet.as_view({"get": "list_reports"}), 
+         name="accounting-assistant-reports"),
+    path("accounting-assistant/reports/<uuid:pk>/download/", 
+         AccountingAssistantViewSet.as_view({"get": "download_report"}), 
+         name="accounting-assistant-download-report"),
+    path("accounting-assistant/reports/<uuid:pk>/approve/", 
+         AccountingAssistantViewSet.as_view({"post": "approve_report"}), 
+         name="accounting-assistant-approve-report"),
+    path("accounting-assistant/ai-query/", 
+         AccountingAssistantViewSet.as_view({"post": "ai_query"}), 
+         name="accounting-assistant-ai-query"),
+    path("accounting-assistant/stats/", 
+         AccountingAssistantViewSet.as_view({"get": "get_stats"}), 
+         name="accounting-assistant-stats"),
 ]

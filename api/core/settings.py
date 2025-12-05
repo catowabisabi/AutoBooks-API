@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'ai_assistants',
     'coredata',
     'health',
-    'accounting',  # New accounting module
+    'accounting',  # Accounting module
+    'business',    # Business operations - Audits, Tax Returns, Revenue, BMI
 ]
 
 MIDDLEWARE = [

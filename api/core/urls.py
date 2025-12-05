@@ -46,15 +46,18 @@ urlpatterns = [
     path('api/v1/', include('health.urls')),
     path('api/v1/', include('coredata.urls')),
     path('api/v1/', include('users.urls')),
-    path('api/v1/', include('hrms.urls')),
+    path('api/v1/hrms/', include('hrms.urls')),
     path('api/v1/', include('documents.urls')),
-    path('api/v1/', include('analytics.urls')),
+    path('api/v1/analytics/', include('analytics.urls')),
 
     # AI Assistants
     path('api/v1/', include('ai_assistants.urls')),
     
     # Accounting Module
     path('api/v1/', include('accounting.urls')),
+    
+    # Business Operations Module
+    path('api/v1/business/', include('business.urls')),
 ]
 
 # Serve media files in development
