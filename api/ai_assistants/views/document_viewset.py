@@ -155,3 +155,240 @@ class CombinedDocumentProcessingView(APIView):
                 "document_processed": False,
                 "query_processed": False
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================
+# New Model-Based ViewSets
+# ============================================================
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.conf import settings
+from django.db.models import Q
+
+from ai_assistants.models import AIDocument, DocumentComparison
+from ai_assistants.serializers.document_serializer import (
+    AIDocumentSerializer, AIDocumentListSerializer, AIDocumentUploadSerializer,
+    DocumentComparisonSerializer, DocumentCompareRequestSerializer,
+    DocumentOCRRequestSerializer, DocumentSummarizeRequestSerializer, DocumentSearchSerializer
+)
+
+
+def get_permission_classes():
+    """Return permission classes based on DEBUG setting"""
+    if settings.DEBUG:
+        return [AllowAny()]
+    return [IsAuthenticated()]
+
+
+class AIDocumentViewSet(viewsets.ModelViewSet):
+    """
+    AI Document management with OCR, summarization, search
+    """
+    queryset = AIDocument.objects.all()
+    serializer_class = AIDocumentSerializer
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def get_permissions(self):
+        return get_permission_classes()
+    
+    def get_queryset(self):
+        queryset = AIDocument.objects.filter(is_active=True)
+        
+        # Filter by document type
+        doc_type = self.request.query_params.get('document_type')
+        if doc_type:
+            queryset = queryset.filter(document_type=doc_type)
+        
+        # Filter by OCR status
+        ocr_processed = self.request.query_params.get('ocr_processed')
+        if ocr_processed is not None:
+            queryset = queryset.filter(is_ocr_processed=ocr_processed.lower() == 'true')
+        
+        # Filter by client
+        client_id = self.request.query_params.get('client_id')
+        if client_id:
+            queryset = queryset.filter(related_client_id=client_id)
+        
+        # Search in extracted text and summary
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(extracted_text__icontains=search) |
+                Q(ai_summary__icontains=search) |
+                Q(ai_keywords__contains=[search])
+            )
+        
+        return queryset.order_by('-created_at')
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return AIDocumentListSerializer
+        if self.action == 'create':
+            return AIDocumentUploadSerializer
+        return AIDocumentSerializer
+    
+    def perform_create(self, serializer):
+        file = self.request.FILES.get('file')
+        user = self.request.user if self.request.user.is_authenticated else None
+        
+        serializer.save(
+            uploaded_by=user,
+            original_filename=file.name if file else '',
+            file_size=file.size if file else 0,
+            mime_type=file.content_type if file else ''
+        )
+    
+    @action(detail=True, methods=['post'])
+    def ocr(self, request, pk=None):
+        """
+        Run OCR on document
+        """
+        document = self.get_object()
+        
+        # TODO: Integrate with OCR service (Tesseract/Google Vision)
+        # For now, mock OCR result
+        document.is_ocr_processed = True
+        document.extracted_text = f"[OCR Demo] Extracted text from {document.original_filename}"
+        document.ocr_confidence = 0.85
+        document.save()
+        
+        return Response({
+            'status': 'ocr_completed',
+            'extracted_text': document.extracted_text,
+            'confidence': document.ocr_confidence
+        })
+    
+    @action(detail=True, methods=['post'])
+    def summarize(self, request, pk=None):
+        """
+        AI summarize document
+        """
+        document = self.get_object()
+        
+        serializer = DocumentSummarizeRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        length = serializer.validated_data.get('summary_length', 'medium')
+        
+        # TODO: Integrate with AI service (GPT)
+        # For now, mock summary
+        document.ai_summary = f"[AI Summary - {length}] Summary of document: {document.title}"
+        document.ai_keywords = ['document', 'summary', 'ai']
+        document.ai_entities = {
+            'dates': ['2024-01-01'],
+            'amounts': ['$1,000'],
+            'names': ['John Doe']
+        }
+        document.save()
+        
+        return Response({
+            'summary': document.ai_summary,
+            'keywords': document.ai_keywords,
+            'entities': document.ai_entities
+        })
+    
+    @action(detail=False, methods=['post'])
+    def compare(self, request):
+        """
+        Compare two documents
+        """
+        serializer = DocumentCompareRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        doc_a_id = serializer.validated_data['document_a_id']
+        doc_b_id = serializer.validated_data['document_b_id']
+        
+        try:
+            doc_a = AIDocument.objects.get(id=doc_a_id)
+            doc_b = AIDocument.objects.get(id=doc_b_id)
+        except AIDocument.DoesNotExist:
+            return Response(
+                {'error': 'One or both documents not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        user = request.user if request.user.is_authenticated else None
+        
+        # TODO: Integrate with AI service for comparison
+        # For now, mock comparison
+        comparison = DocumentComparison.objects.create(
+            document_a=doc_a,
+            document_b=doc_b,
+            similarity_score=0.75,
+            differences=[
+                {'section': 'Header', 'type': 'modified', 'description': 'Date changed'},
+                {'section': 'Terms', 'type': 'added', 'description': 'New clause added'}
+            ],
+            ai_analysis=f"Documents {doc_a.title} and {doc_b.title} are 75% similar with key differences in header and terms sections.",
+            created_by=user
+        )
+        
+        return Response(
+            DocumentComparisonSerializer(comparison).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=False, methods=['post'])
+    def search(self, request):
+        """
+        Full-text search across all documents
+        """
+        serializer = DocumentSearchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        query = serializer.validated_data['query']
+        doc_types = serializer.validated_data.get('document_types', [])
+        tags = serializer.validated_data.get('tags', [])
+        
+        queryset = self.get_queryset()
+        
+        # Full-text search
+        queryset = queryset.filter(
+            Q(title__icontains=query) |
+            Q(extracted_text__icontains=query) |
+            Q(ai_summary__icontains=query)
+        )
+        
+        if doc_types:
+            queryset = queryset.filter(document_type__in=doc_types)
+        
+        if tags:
+            for tag in tags:
+                queryset = queryset.filter(tags__contains=[tag])
+        
+        results = AIDocumentListSerializer(queryset[:20], many=True).data
+        
+        return Response({
+            'query': query,
+            'total': queryset.count(),
+            'results': results
+        })
+    
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Get document statistics"""
+        queryset = self.get_queryset()
+        return Response({
+            'total': queryset.count(),
+            'ocr_processed': queryset.filter(is_ocr_processed=True).count(),
+            'by_type': {
+                doc_type: queryset.filter(document_type=doc_type).count()
+                for doc_type, _ in AIDocument._meta.get_field('document_type').choices
+            }
+        })
+
+
+class DocumentComparisonViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    View document comparisons
+    """
+    queryset = DocumentComparison.objects.all()
+    serializer_class = DocumentComparisonSerializer
+    
+    def get_permissions(self):
+        return get_permission_classes()
+    
+    def get_queryset(self):
+        return DocumentComparison.objects.filter(is_active=True).order_by('-created_at')

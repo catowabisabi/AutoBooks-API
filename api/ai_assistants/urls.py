@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from ai_assistants.views.analyst_viewset import (
     AnalystDataView,
@@ -9,12 +9,25 @@ from ai_assistants.views.planner_viewset import (
     PlannerDataView,
     PlannerQueryView,
     StartDatasetLoadView as PlannerStartDatasetLoadView,
+    PlannerTaskViewSet,
+    ScheduleEventViewSet,
 )
 from ai_assistants.views.document_viewset import (
     DocumentUploadView,
     DocumentInfoView,
     DocumentQueryView,
-    CombinedDocumentProcessingView
+    CombinedDocumentProcessingView,
+    AIDocumentViewSet,
+    DocumentComparisonViewSet,
+)
+from ai_assistants.views.email_viewset import (
+    EmailViewSet,
+    EmailAccountViewSet,
+    EmailTemplateViewSet,
+)
+from ai_assistants.views.brainstorm_viewset import (
+    BrainstormSessionViewSet,
+    BrainstormIdeaViewSet,
 )
 from ai_assistants.views.finance_viewset import ReceiptAnalyzerViewSet
 from ai_assistants.views.ai_service_viewset import AIServiceViewSet
@@ -23,6 +36,23 @@ from ai_assistants.views.accounting_viewset import AccountingAssistantViewSet
 # Router for viewsets
 router = DefaultRouter()
 router.register(r'ai-service', AIServiceViewSet, basename='ai-service')
+
+# Email Assistant Router
+router.register(r'email-assistant/accounts', EmailAccountViewSet, basename='email-account')
+router.register(r'email-assistant/emails', EmailViewSet, basename='email')
+router.register(r'email-assistant/templates', EmailTemplateViewSet, basename='email-template')
+
+# Planner Assistant Router  
+router.register(r'planner-assistant/tasks', PlannerTaskViewSet, basename='planner-task')
+router.register(r'planner-assistant/events', ScheduleEventViewSet, basename='schedule-event')
+
+# Document Assistant Router
+router.register(r'document-assistant/documents', AIDocumentViewSet, basename='ai-document')
+router.register(r'document-assistant/comparisons', DocumentComparisonViewSet, basename='document-comparison')
+
+# Brainstorming Assistant Router
+router.register(r'brainstorm-assistant/sessions', BrainstormSessionViewSet, basename='brainstorm-session')
+router.register(r'brainstorm-assistant/ideas', BrainstormIdeaViewSet, basename='brainstorm-idea')
 
 urlpatterns = [
     # AI Service (unified AI API)
@@ -95,4 +125,7 @@ urlpatterns = [
     path("accounting-assistant/stats/", 
          AccountingAssistantViewSet.as_view({"get": "get_stats"}), 
          name="accounting-assistant-stats"),
+    
+    # Include router URLs
+    path("", include(router.urls)),
 ]

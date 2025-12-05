@@ -6,10 +6,12 @@ ViewSets for Companies, Audits, Tax Returns, Billable Hours, Revenue, and BMI IP
 
 from decimal import Decimal
 from django.db.models import Sum, Count, Q
+from django.conf import settings
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import (
@@ -27,6 +29,13 @@ from .serializers import (
 )
 
 
+# Allow anonymous access in DEBUG mode for development
+def get_permission_classes():
+    if settings.DEBUG:
+        return [AllowAny]
+    return [IsAuthenticated]
+
+
 class CompanyViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Company CRUD operations
@@ -39,7 +48,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
     destroy: DELETE /api/v1/business/companies/{id}/
     """
     queryset = Company.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['industry', 'is_active']
     search_fields = ['name', 'registration_number', 'contact_person']
@@ -74,7 +83,7 @@ class AuditProjectViewSet(viewsets.ModelViewSet):
     destroy: DELETE /api/v1/business/audits/{id}/
     """
     queryset = AuditProject.objects.select_related('company', 'assigned_to').all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'audit_type', 'fiscal_year', 'assigned_to']
     search_fields = ['company__name', 'notes']
@@ -103,7 +112,7 @@ class TaxReturnCaseViewSet(viewsets.ModelViewSet):
     ViewSet for TaxReturnCase CRUD operations
     """
     queryset = TaxReturnCase.objects.select_related('company', 'handler').all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'tax_type', 'tax_year', 'handler', 'documents_received']
     search_fields = ['company__name', 'notes']
@@ -136,7 +145,7 @@ class BillableHourViewSet(viewsets.ModelViewSet):
     ViewSet for BillableHour CRUD operations
     """
     queryset = BillableHour.objects.select_related('employee', 'company').all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['role', 'is_billable', 'is_invoiced', 'company', 'employee']
     search_fields = ['employee__full_name', 'company__name', 'description']
@@ -186,7 +195,7 @@ class RevenueViewSet(viewsets.ModelViewSet):
     ViewSet for Revenue CRUD operations
     """
     queryset = Revenue.objects.select_related('company').all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'company']
     search_fields = ['company__name', 'invoice_number', 'contact_name']
@@ -244,7 +253,7 @@ class BMIIPOPRRecordViewSet(viewsets.ModelViewSet):
     ViewSet for BMIIPOPRRecord CRUD operations
     """
     queryset = BMIIPOPRRecord.objects.select_related('company', 'lead_manager').prefetch_related('documents').all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['stage', 'status', 'project_type', 'lead_manager']
     search_fields = ['project_name', 'company__name', 'notes']
@@ -272,13 +281,12 @@ class BMIDocumentViewSet(viewsets.ModelViewSet):
     """ViewSet for BMI Documents"""
     queryset = BMIDocument.objects.select_related('bmi_project', 'uploaded_by').all()
     serializer_class = BMIDocumentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['bmi_project', 'file_type']
 
 
 # Dashboard Overview View
-from rest_framework.views import APIView
 from django.utils import timezone
 
 
@@ -287,7 +295,7 @@ class DashboardOverviewView(APIView):
     Get dashboard overview statistics
     GET /api/v1/business/dashboard/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     
     def get(self, request):
         # Audit stats

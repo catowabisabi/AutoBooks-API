@@ -227,3 +227,28 @@ class ExpenseReport(BaseModel):
     
     def __str__(self):
         return f"{self.report_number} - {self.title}"
+
+
+# Import extended AI models for convenience
+from .models_extended import (
+    # Email Assistant
+    EmailStatus,
+    EmailCategory,
+    EmailPriority,
+    EmailAccount,
+    Email,
+    EmailAttachment,
+    EmailTemplate,
+    # Planner AI
+    TaskPriority,
+    TaskStatus,
+    PlannerTask,
+    ScheduleEvent,
+    # Document Assistant
+    DocumentType,
+    AIDocument,
+    DocumentComparison,
+    # Brainstorming Assistant
+    BrainstormSession,
+    BrainstormIdea,
+)
