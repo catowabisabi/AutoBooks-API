@@ -87,6 +87,45 @@ class GoogleOAuthCallbackView(APIView):
             frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
             return redirect(f"{frontend_url}/auth/sign-in?error={str(e)}")
     
+    def post(self, request):
+        """Handle POST request from frontend with authorization code"""
+        code = request.data.get('code')
+        
+        if not code:
+            return Response(
+                {'error': 'No authorization code provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Exchange code for tokens
+            token_data = self._exchange_code_for_tokens(code)
+            
+            # Get user info from Google
+            user_info = self._get_google_user_info(token_data['access_token'])
+            
+            # Create or get user
+            user = self._get_or_create_user(user_info)
+            
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': {
+                    'id': str(user.id),
+                    'email': user.email,
+                    'full_name': user.full_name,
+                }
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
     def _exchange_code_for_tokens(self, code):
         """Exchange authorization code for tokens"""
         token_url = 'https://oauth2.googleapis.com/token'
