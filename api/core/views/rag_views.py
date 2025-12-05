@@ -57,7 +57,7 @@ class RAGChatView(APIView):
     Chat with AI using RAG-enhanced responses.
     Combines knowledge base context with AI generation.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]  # Require authentication
     
     def post(self, request):
         query = request.data.get('query', '')
@@ -89,11 +89,14 @@ class RAGChatView(APIView):
         
         # Generate AI response
         try:
-            ai_service = AIService()
+            # 將字串 provider 轉換為 AIProvider enum
+            from core.libs.ai_service import AIProvider
+            provider_enum = AIProvider(provider) if provider else AIProvider.OPENAI
+            
+            ai_service = AIService(provider=provider_enum)
             response = ai_service.chat(
                 message=query,
-                system_prompt=system_prompt,
-                provider=provider
+                system_prompt=system_prompt
             )
             
             return Response({
@@ -101,7 +104,15 @@ class RAGChatView(APIView):
                 'sources': [item.title for item in kb.search(query, top_k=3, category=category)],
                 'provider': provider,
             })
+        except ValueError as e:
+            # Invalid provider
+            return Response(
+                {'error': f'Invalid provider: {provider}. Use openai, gemini, or deepseek.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
+            import traceback
+            traceback.print_exc()  # 打印完整錯誤到後端日誌
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
