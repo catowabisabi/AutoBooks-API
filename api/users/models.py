@@ -144,3 +144,106 @@ class UserSettings(BaseModel):
 
     def __str__(self):
         return f"Settings for {self.user.email}"
+
+
+class SubscriptionPlan(BaseModel):
+    """Subscription Plan model for membership tiers"""
+    class PlanType(models.TextChoices):
+        FREE = 'free', 'Free'
+        PRO = 'pro', 'Pro'
+        PRO_PLUS = 'pro_plus', 'Pro+ Enterprise'
+    
+    class BillingCycle(models.TextChoices):
+        MONTHLY = 'monthly', 'Monthly'
+        YEARLY = 'yearly', 'Yearly'
+    
+    # Plan Identification
+    name = models.CharField(max_length=100)
+    name_en = models.CharField(max_length=100, help_text='English name')
+    name_zh = models.CharField(max_length=100, help_text='Chinese name')
+    plan_type = models.CharField(max_length=20, choices=PlanType.choices, unique=True)
+    
+    # Description
+    description = models.TextField(blank=True)
+    description_en = models.TextField(blank=True, help_text='English description')
+    description_zh = models.TextField(blank=True, help_text='Chinese description')
+    
+    # Pricing
+    price_monthly = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    price_yearly = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    currency = models.CharField(max_length=3, default='USD')
+    
+    # Features & Limits
+    max_users = models.IntegerField(default=1, help_text='Maximum number of users')
+    max_companies = models.IntegerField(default=1, help_text='Maximum number of companies')
+    max_storage_gb = models.IntegerField(default=1, help_text='Maximum storage in GB')
+    max_documents = models.IntegerField(default=100, help_text='Maximum number of documents')
+    max_invoices_monthly = models.IntegerField(default=10, help_text='Maximum invoices per month')
+    max_employees = models.IntegerField(default=5, help_text='Maximum employees in HRMS')
+    max_projects = models.IntegerField(default=3, help_text='Maximum active projects')
+    
+    # Feature Flags
+    has_ai_assistant = models.BooleanField(default=False)
+    has_advanced_analytics = models.BooleanField(default=False)
+    has_custom_reports = models.BooleanField(default=False)
+    has_api_access = models.BooleanField(default=False)
+    has_priority_support = models.BooleanField(default=False)
+    has_sso = models.BooleanField(default=False, help_text='Single Sign-On')
+    has_audit_logs = models.BooleanField(default=False)
+    has_data_export = models.BooleanField(default=True)
+    has_multi_currency = models.BooleanField(default=False)
+    has_custom_branding = models.BooleanField(default=False)
+    
+    # RAG & AI Limits
+    ai_queries_monthly = models.IntegerField(default=0, help_text='AI queries per month (0=unlimited)')
+    rag_documents = models.IntegerField(default=0, help_text='RAG knowledge base documents')
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_popular = models.BooleanField(default=False, help_text='Show as popular/recommended')
+    sort_order = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['sort_order', 'price_monthly']
+        verbose_name = 'Subscription Plan'
+        verbose_name_plural = 'Subscription Plans'
+    
+    def __str__(self):
+        return f"{self.name} ({self.plan_type})"
+
+
+class UserSubscription(BaseModel):
+    """Track user subscriptions"""
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        CANCELLED = 'cancelled', 'Cancelled'
+        EXPIRED = 'expired', 'Expired'
+        TRIAL = 'trial', 'Trial'
+        PAST_DUE = 'past_due', 'Past Due'
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name='subscriptions')
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.TRIAL)
+    billing_cycle = models.CharField(
+        max_length=10, 
+        choices=SubscriptionPlan.BillingCycle.choices, 
+        default=SubscriptionPlan.BillingCycle.MONTHLY
+    )
+    
+    # Dates
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    trial_end_date = models.DateField(null=True, blank=True)
+    next_billing_date = models.DateField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    
+    # Payment
+    stripe_subscription_id = models.CharField(max_length=100, blank=True, null=True)
+    stripe_customer_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'User Subscription'
+        verbose_name_plural = 'User Subscriptions'
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.plan.name} ({self.status})"

@@ -98,8 +98,18 @@ class GoogleOAuthCallbackView(APIView):
             )
         
         try:
+            # Get redirect URI from request origin (to match what frontend used)
+            origin = request.headers.get('Origin', request.headers.get('Referer', ''))
+            if origin:
+                # Remove any trailing slash and path from origin
+                from urllib.parse import urlparse
+                parsed = urlparse(origin)
+                redirect_uri = f"{parsed.scheme}://{parsed.netloc}/auth/google/callback"
+            else:
+                redirect_uri = settings.GOOGLE_OAUTH_REDIRECT_URI
+            
             # Exchange code for tokens
-            token_data = self._exchange_code_for_tokens(code)
+            token_data = self._exchange_code_for_tokens(code, redirect_uri)
             
             # Get user info from Google
             user_info = self._get_google_user_info(token_data['access_token'])
@@ -126,7 +136,7 @@ class GoogleOAuthCallbackView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
     
-    def _exchange_code_for_tokens(self, code):
+    def _exchange_code_for_tokens(self, code, redirect_uri=None):
         """Exchange authorization code for tokens"""
         token_url = 'https://oauth2.googleapis.com/token'
         
@@ -134,7 +144,7 @@ class GoogleOAuthCallbackView(APIView):
             'code': code,
             'client_id': settings.GOOGLE_OAUTH_CLIENT_ID,
             'client_secret': settings.GOOGLE_OAUTH_CLIENT_SECRET,
-            'redirect_uri': settings.GOOGLE_OAUTH_REDIRECT_URI,
+            'redirect_uri': redirect_uri or settings.GOOGLE_OAUTH_REDIRECT_URI,
             'grant_type': 'authorization_code'
         }
         
