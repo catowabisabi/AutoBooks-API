@@ -168,7 +168,18 @@ def handle_query_logic(query: str) -> dict:
         response_obj = generate_response(query, df, query_type)
         try:
             result = eval(response_obj["code"], {"df": df, "pd": pd})
-            return {"type": "table", "data": result.to_dict(orient="records")}
+            
+            # Handle different result types
+            if isinstance(result, pd.DataFrame):
+                data = result.to_dict(orient="records")
+            elif isinstance(result, pd.Series):
+                data = result.reset_index().to_dict(orient="records")
+            elif np.isscalar(result) or isinstance(result, (int, float, str)):
+                data = [{"Result": result}]
+            else:
+                data = [{"Result": str(result)}]
+                
+            return {"type": "table", "data": data}
         except Exception as e:
             return {"type": "error", "message": f"Error executing query: {e}"}
 

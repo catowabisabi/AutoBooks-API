@@ -16,13 +16,13 @@ Your task is to classify the user's query into one of these categories:
    - Examples:
      • "Show me employees in the Sales department."
      • "List employees with more than 5 years of experience."
-     • "What is the average salary by department?"
+     • "Calculate the total revenue."
 
-2. GRAPH – For queries that request a chart, visualization, or graph using Plotly, based on the provided data columns.
+2. GRAPH – For queries that request a chart, visualization, or graph using Plotly, OR for queries that imply a comparison, trend, or distribution (e.g. "Sales by Region").
    - Examples:
      • "Plot a bar chart of Salary by Department."
-     • "Create a scatter plot of Performance_Score versus Years_of_Experience."
-     • "Show me a pie chart of Remote_Work distribution."
+     • "Show me sales by region."
+     • "Compare revenue across different years."
 
 3. INVALID – For queries that are unrelated to the available data or cannot be answered with the provided columns.
    - Examples:

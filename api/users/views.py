@@ -7,7 +7,8 @@ from datetime import timedelta
 from .models import User, UserSettings, SubscriptionPlan, UserSubscription
 from .serializers import (
     AdminCreateUserSerializer, UserSerializer, UserProfileSerializer, 
-    UserSettingsSerializer, SubscriptionPlanSerializer, UserSubscriptionSerializer
+    UserSettingsSerializer, SubscriptionPlanSerializer, UserSubscriptionSerializer,
+    UserRegistrationSerializer
 )
 
 
@@ -27,6 +28,8 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
+        if self.action == 'register':
+            return UserRegistrationSerializer
         if self.action == 'create':
             return AdminCreateUserSerializer
         if self.action in ['update_profile', 'me']:
@@ -35,11 +38,37 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         """Only admins can create, update, delete users"""
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action == 'register':
+            self.permission_classes = [AllowAny]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             self.permission_classes = [IsAuthenticated, IsAdminUser]
         else:
             self.permission_classes = [IsAuthenticated]
         return [permission() for permission in self.permission_classes]
+
+    @action(detail=False, methods=['post'])
+    def register(self, request):
+        """Register a new user"""
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            
+            # Generate tokens for immediate login
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'success': True,
+                'message': 'User registered successfully',
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': UserProfileSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+            
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'], url_path='me')
     def me(self, request):
