@@ -1,0 +1,226 @@
+[
+  {
+    "id": "acc-001",
+    "title_en": "How to View Chart of Accounts",
+    "title_zh": "如何查看會計科目表",
+    "content_en": "The Chart of Accounts (COA) is a listing of all accounting accounts.\n\nSteps:\n1. Click 'Accounting' in the left menu\n2. Select 'Chart of Accounts'\n3. You will see all accounts listed with account code, name, type, and balance\n\nAccount Types:\n- Asset: Resources owned by the company\n- Liability: Debts owed by the company\n- Equity: Shareholders' equity\n- Revenue: Business income\n- Expense: Business expenditures",
+    "content_zh": "會計科目表 (Chart of Accounts) 是記錄所有會計科目的清單。\n\n查看步驟：\n1. 在左側選單點擊「會計」\n2. 選擇「會計科目表」\n3. 您會看到所有科目列表，包括科目代碼、名稱、類型和餘額\n\n科目類型說明：\n- 資產 (Asset): 公司擁有的資源\n- 負債 (Liability): 公司的債務\n- 權益 (Equity): 股東權益\n- 收入 (Revenue): 營業收入\n- 費用 (Expense): 營業支出",
+    "category": "accounting"
+  },
+  {
+    "id": "acc-002",
+    "title_en": "How to Create Journal Entries",
+    "title_zh": "如何建立日記帳分錄",
+    "content_en": "Journal entries record accounting transactions.\n\nSteps:\n1. Go to 'Accounting' > 'Journal Entries'\n2. Click 'New Entry'\n3. Fill in entry information:\n   - Date: Transaction date\n   - Description: Transaction explanation\n   - Debit account and amount\n   - Credit account and amount\n4. Confirm debit equals credit\n5. Click 'Save'\n\nImportant Principles:\n- Debits must equal credits\n- Assets and expenses increase with debits\n- Liabilities, equity, and revenue increase with credits",
+    "content_zh": "日記帳分錄是記錄會計交易的方式。\n\n建立步驟：\n1. 進入「會計」>「日記帳分錄」\n2. 點擊「新增分錄」\n3. 填寫分錄資訊：\n   - 日期：交易日期\n   - 描述：交易說明\n   - 借方科目和金額\n   - 貸方科目和金額\n4. 確認借貸方金額相等\n5. 點擊「儲存」\n\n重要原則：\n- 借方金額必須等於貸方金額\n- 資產、費用增加記借方\n- 負債、權益、收入增加記貸方",
+    "category": "accounting"
+  },
+  {
+    "id": "acc-003",
+    "title_en": "How to Create Invoices",
+    "title_zh": "如何建立發票",
+    "content_en": "Invoices record sales transactions.\n\nSteps:\n1. Go to 'Accounting' > 'Invoices'\n2. Click 'New Invoice'\n3. Fill in invoice information:\n   - Invoice type: Sales or Purchase\n   - Customer/Supplier name\n   - Invoice date and due date\n   - Line items (item name, quantity, unit price)\n4. System automatically calculates total\n5. Click 'Save' or 'Send'\n\nInvoice Statuses:\n- Draft: Not yet complete\n- Sent: Sent to customer\n- Paid: Payment received",
+    "content_zh": "發票用於記錄銷售交易。\n\n建立步驟：\n1. 進入「會計」>「發票」\n2. 點擊「新增發票」\n3. 填寫發票資訊：\n   - 發票類型：銷售或採購\n   - 客戶/供應商名稱\n   - 發票日期和到期日\n   - 品項明細（品名、數量、單價）\n4. 系統自動計算總金額\n5. 點擊「儲存」或「發送」\n\n發票狀態：\n- 草稿：尚未完成\n- 已發送：已寄給客戶\n- 已付款：已收到款項",
+    "category": "accounting"
+  },
+  {
+    "id": "acc-004",
+    "title_en": "How to Generate Financial Reports",
+    "title_zh": "如何生成財務報表",
+    "content_en": "The system provides various financial reports.\n\nViewing Reports:\n1. Go to 'Accounting' > 'Reports'\n2. Select report type:\n   - Trial Balance: View debit/credit balances\n   - Balance Sheet: View financial position\n   - Income Statement: View business performance\n\nSteps:\n1. Select report type\n2. Set date range\n3. Click 'Generate Report'\n4. Export to PDF or Excel",
+    "content_zh": "系統提供多種財務報表。\n\n查看報表：\n1. 進入「會計」>「報表」\n2. 選擇報表類型：\n   - 試算表：查看借貸方餘額\n   - 資產負債表：查看財務狀況\n   - 損益表：查看經營績效\n\n操作方式：\n1. 選擇報表類型\n2. 設定日期範圍\n3. 點擊「生成報表」\n4. 可匯出 PDF 或 Excel",
+    "category": "accounting"
+  },
+  {
+    "id": "acc-005",
+    "title_en": "How to Record Expenses",
+    "title_zh": "如何記錄費用",
+    "content_en": "Track business expenses accurately.\n\nSteps:\n1. Go to 'Finance' > 'Expenses'\n2. Click 'Add Expense'\n3. Fill in details:\n   - Expense category\n   - Amount and currency\n   - Date\n   - Vendor/payee\n   - Receipt attachment\n4. Click 'Save'\n\nExpense Categories:\n- Office Supplies\n- Travel\n- Utilities\n- Professional Services\n- Marketing\n- Equipment",
+    "content_zh": "準確追蹤業務費用。\n\n步驟：\n1. 前往「財務」>「費用」\n2. 點擊「新增費用」\n3. 填寫詳細資訊：\n   - 費用類別\n   - 金額和幣別\n   - 日期\n   - 供應商/收款人\n   - 收據附件\n4. 點擊「儲存」\n\n費用類別：\n- 辦公用品\n- 差旅\n- 水電費\n- 專業服務\n- 行銷\n- 設備",
+    "category": "accounting"
+  },
+  {
+    "id": "acc-006",
+    "title_en": "Understanding Tax Rates",
+    "title_zh": "了解稅率設定",
+    "content_en": "Configure tax rates for accurate invoicing.\n\nViewing Tax Rates:\n1. Go to 'Business' > 'Tax Rates'\n2. View all configured tax rates\n\nCommon Tax Types:\n- Sales Tax / VAT: Applied to sales\n- GST: Goods and Services Tax\n- Withholding Tax: Tax withheld from payments\n\nCreating Tax Rates:\n1. Click 'Add Tax Rate'\n2. Enter name, percentage, and type\n3. Set default if applicable\n4. Save changes",
+    "content_zh": "設定稅率以確保發票準確。\n\n查看稅率：\n1. 前往「商務」>「稅率」\n2. 查看所有已設定的稅率\n\n常見稅種：\n- 銷售稅 / 增值稅：適用於銷售\n- GST：商品及服務稅\n- 預扣稅：從付款中預扣的稅款\n\n建立稅率：\n1. 點擊「新增稅率」\n2. 輸入名稱、百分比和類型\n3. 如適用則設為預設\n4. 儲存變更",
+    "category": "accounting"
+  },
+  {
+    "id": "hrms-001",
+    "title_en": "How to Manage Employee Data",
+    "title_zh": "如何管理員工資料",
+    "content_en": "Employee data management helps maintain personnel information.\n\nSteps:\n1. Go to 'Human Resources' > 'Employees'\n2. View employee list\n\nAdding Employees:\n1. Click 'Add Employee'\n2. Fill in basic information:\n   - Employee ID\n   - Full name\n   - Department\n   - Job title\n   - Hire date\n3. Click 'Save'\n\nEditing Employees:\n1. Click 'Edit' on employee row\n2. Modify information\n3. Click 'Save'",
+    "content_zh": "員工資料管理功能讓您維護公司人員資訊。\n\n操作步驟：\n1. 進入「人力資源」>「員工」\n2. 查看員工列表\n\n新增員工：\n1. 點擊「新增員工」\n2. 填寫基本資料：\n   - 員工編號\n   - 姓名\n   - 部門\n   - 職稱\n   - 入職日期\n3. 點擊「儲存」\n\n編輯員工：\n1. 點擊員工列表中的「編輯」\n2. 修改資料\n3. 點擊「儲存」",
+    "category": "hrms"
+  },
+  {
+    "id": "hrms-002",
+    "title_en": "How to Request Leave",
+    "title_zh": "如何申請請假",
+    "content_en": "Employees can request various types of leave through the system.\n\nSteps:\n1. Go to 'Human Resources' > 'Leaves'\n2. Click 'Request Leave'\n3. Fill in request form:\n   - Leave type: Annual, Sick, Personal, etc.\n   - Start date\n   - End date\n   - Reason\n4. Click 'Submit'\n\nRequest Statuses:\n- Pending: Awaiting manager approval\n- Approved: Request approved\n- Rejected: Request denied",
+    "content_zh": "員工可以透過系統申請各類休假。\n\n申請步驟：\n1. 進入「人力資源」>「請假」\n2. 點擊「申請休假」\n3. 填寫申請表：\n   - 假別：年假、病假、事假等\n   - 開始日期\n   - 結束日期\n   - 原因說明\n4. 點擊「提交」\n\n申請狀態：\n- 審核中：等待主管核准\n- 已核准：申請通過\n- 已拒絕：申請未通過",
+    "category": "hrms"
+  },
+  {
+    "id": "hrms-003",
+    "title_en": "Managing Departments",
+    "title_zh": "管理部門",
+    "content_en": "Organize your company structure with departments.\n\nViewing Departments:\n1. Go to 'Human Resources' > 'Departments'\n2. View department list and hierarchy\n\nCreating Departments:\n1. Click 'Add Department'\n2. Enter department name\n3. Select parent department (if applicable)\n4. Assign department head\n5. Click 'Save'\n\nDepartment Structure:\n- Supports hierarchical organization\n- Can assign multiple employees\n- Track department budgets",
+    "content_zh": "透過部門組織公司架構。\n\n查看部門：\n1. 前往「人力資源」>「部門」\n2. 查看部門列表和層級架構\n\n建立部門：\n1. 點擊「新增部門」\n2. 輸入部門名稱\n3. 選擇上級部門（如適用）\n4. 指派部門主管\n5. 點擊「儲存」\n\n部門架構：\n- 支援層級組織\n- 可指派多位員工\n- 追蹤部門預算",
+    "category": "hrms"
+  },
+  {
+    "id": "proj-001",
+    "title_en": "How to Create Projects",
+    "title_zh": "如何建立專案",
+    "content_en": "Create and manage projects for your team.\n\nSteps:\n1. Go to 'Projects'\n2. Click 'New Project'\n3. Fill in project details:\n   - Project name\n   - Description\n   - Start and end dates\n   - Project manager\n   - Team members\n   - Budget\n4. Click 'Create'\n\nProject Views:\n- List: See all projects in a list\n- Kanban: Visual task management\n- Timeline: Gantt chart view",
+    "content_zh": "為您的團隊建立和管理專案。\n\n步驟：\n1. 前往「專案」\n2. 點擊「新增專案」\n3. 填寫專案詳細資訊：\n   - 專案名稱\n   - 描述\n   - 開始和結束日期\n   - 專案經理\n   - 團隊成員\n   - 預算\n4. 點擊「建立」\n\n專案檢視：\n- 列表：以列表查看所有專案\n- 看板：視覺化任務管理\n- 時間軸：甘特圖檢視",
+    "category": "projects"
+  },
+  {
+    "id": "proj-002",
+    "title_en": "Using Kanban Board",
+    "title_zh": "使用看板",
+    "content_en": "Kanban board helps visualize task progress.\n\nUsing Kanban:\n1. Go to 'Projects' > Select a project > 'Kanban'\n2. View tasks in columns (To Do, In Progress, Done)\n3. Drag and drop tasks between columns\n\nCreating Tasks:\n1. Click '+' in any column\n2. Enter task title and description\n3. Assign team member\n4. Set due date\n5. Click 'Save'\n\nFeatures:\n- Drag and drop task management\n- Color-coded labels\n- Due date tracking\n- Task assignments",
+    "content_zh": "看板幫助視覺化任務進度。\n\n使用看板：\n1. 前往「專案」> 選擇專案 >「看板」\n2. 在欄位中查看任務（待辦、進行中、已完成）\n3. 拖放任務在欄位間移動\n\n建立任務：\n1. 點擊任一欄位中的「+」\n2. 輸入任務標題和描述\n3. 指派團隊成員\n4. 設定到期日\n5. 點擊「儲存」\n\n功能：\n- 拖放任務管理\n- 顏色標籤\n- 到期日追蹤\n- 任務指派",
+    "category": "projects"
+  },
+  {
+    "id": "ai-001",
+    "title_en": "How to Use AI Assistant",
+    "title_zh": "如何使用 AI 助手",
+    "content_en": "AI Assistant helps you get information and complete tasks quickly.\n\nUsage:\n1. Click the chat icon at bottom right\n2. Enter your question\n3. AI Assistant will provide contextual answers\n\nCapabilities:\n- Answer system operation questions\n- Provide accounting guidance\n- Assist with data queries\n- Explain report data\n\nTips:\n- More specific questions get better answers\n- Ask 'How to...' for operation guidance\n- AI provides suggestions based on your current page",
+    "content_zh": "AI 助手可以幫助您快速獲取資訊和完成任務。\n\n使用方式：\n1. 點擊畫面右下角的對話圖示\n2. 輸入您的問題\n3. AI 助手會根據上下文提供回答\n\n功能範圍：\n- 回答系統操作問題\n- 提供會計相關指導\n- 協助資料查詢\n- 解釋報表數據\n\n提示：\n- 問題越具體，回答越準確\n- 可以直接問「如何...」的操作問題\n- AI 會根據您目前的頁面提供相關建議",
+    "category": "ai"
+  },
+  {
+    "id": "ai-002",
+    "title_en": "How to Set Up API Keys",
+    "title_zh": "如何設定 API 金鑰",
+    "content_en": "Set up AI service API keys to enable AI features.\n\nSteps:\n1. Go to 'Settings' > 'API Keys'\n2. Select service to configure:\n   - OpenAI: GPT-4 models\n   - Google Gemini: Gemini models\n   - DeepSeek: Economic AI service\n3. Enter API key\n4. Click 'Save'\n5. Click 'Test' to verify key\n\nObtaining Keys:\n- OpenAI: https://platform.openai.com/api-keys\n- Gemini: https://makersuite.google.com/app/apikey\n- DeepSeek: https://platform.deepseek.com/api_keys",
+    "content_zh": "設定 AI 服務 API 金鑰以啟用 AI 功能。\n\n設定步驟：\n1. 進入「設定」>「API 金鑰」\n2. 選擇要設定的服務：\n   - OpenAI：GPT-4 等模型\n   - Google Gemini：Gemini 模型\n   - DeepSeek：經濟型 AI 服務\n3. 輸入 API 金鑰\n4. 點擊「儲存」\n5. 可點擊「測試」驗證金鑰有效性\n\n取得金鑰：\n- OpenAI: https://platform.openai.com/api-keys\n- Gemini: https://makersuite.google.com/app/apikey\n- DeepSeek: https://platform.deepseek.com/api_keys",
+    "category": "settings"
+  },
+  {
+    "id": "gen-001",
+    "title_en": "How to Switch Language",
+    "title_zh": "如何切換語言",
+    "content_en": "The system supports Traditional Chinese and English interfaces.\n\nSwitching:\n1. Find the language switch button at top right (globe icon)\n2. Click the button\n3. Select 'English' or '繁體中文'\n4. Interface changes immediately\n\nNotes:\n- Language setting is saved in browser\n- Next login will use last language setting",
+    "content_zh": "系統支援繁體中文和英文介面。\n\n切換方式：\n1. 找到頁面右上角的語言切換按鈕（地球圖示）\n2. 點擊按鈕\n3. 選擇「繁體中文」或「English」\n4. 介面會立即切換\n\n注意事項：\n- 語言設定會儲存在瀏覽器中\n- 下次登入會自動使用上次的語言設定",
+    "category": "general"
+  },
+  {
+    "id": "gen-002",
+    "title_en": "How to Switch Companies",
+    "title_zh": "如何切換公司",
+    "content_en": "If you manage multiple companies, switch between them easily.\n\nSteps:\n1. Click company name in sidebar\n2. Select 'Switch Company' or click company dropdown\n3. Choose the company you want to work with\n4. System will load that company's data\n\nFeatures:\n- Each company has separate data\n- User roles can vary by company\n- Quickly switch without logging out",
+    "content_zh": "如果您管理多間公司，可以輕鬆在它們之間切換。\n\n步驟：\n1. 點擊側邊欄中的公司名稱\n2. 選擇「切換公司」或點擊公司下拉選單\n3. 選擇要操作的公司\n4. 系統將載入該公司的資料\n\n功能：\n- 每間公司有獨立的資料\n- 使用者角色可因公司而異\n- 無需登出即可快速切換",
+    "category": "general"
+  },
+  {
+    "id": "gen-003",
+    "title_en": "Dashboard Overview",
+    "title_zh": "控制台總覽",
+    "content_en": "The dashboard provides a quick overview of your business.\n\nDashboard Widgets:\n- Revenue Summary: Monthly/yearly revenue charts\n- Recent Transactions: Latest financial activities\n- Pending Tasks: Tasks requiring attention\n- Employee Overview: Staff statistics\n- Quick Actions: Frequently used functions\n\nCustomization:\n- Widgets can be rearranged\n- Choose which widgets to display\n- Set date ranges for charts",
+    "content_zh": "控制台提供業務的快速總覽。\n\n控制台小工具：\n- 營收摘要：月度/年度營收圖表\n- 最近交易：最新財務活動\n- 待處理任務：需要注意的任務\n- 員工總覽：人員統計\n- 快速操作：常用功能\n\n自訂設定：\n- 小工具可重新排列\n- 選擇顯示哪些小工具\n- 設定圖表日期範圍",
+    "category": "dashboard"
+  },
+  {
+    "id": "biz-001",
+    "title_en": "Managing Currencies",
+    "title_zh": "管理幣別",
+    "content_en": "Configure currencies for multi-currency transactions.\n\nViewing Currencies:\n1. Go to 'Business' > 'Currencies'\n2. View all configured currencies\n\nAdding Currency:\n1. Click 'Add Currency'\n2. Enter currency code (e.g., USD, TWD)\n3. Enter currency name\n4. Set exchange rate\n5. Set decimal places\n6. Click 'Save'\n\nExchange Rates:\n- Can be updated manually or automatically\n- Historical rates are preserved",
+    "content_zh": "設定幣別以進行多幣別交易。\n\n查看幣別：\n1. 前往「商務」>「幣別」\n2. 查看所有已設定的幣別\n\n新增幣別：\n1. 點擊「新增幣別」\n2. 輸入幣別代碼（如 USD、TWD）\n3. 輸入幣別名稱\n4. 設定匯率\n5. 設定小數位數\n6. 點擊「儲存」\n\n匯率：\n- 可手動或自動更新\n- 保留歷史匯率記錄",
+    "category": "business"
+  },
+  {
+    "id": "biz-002",
+    "title_en": "Business Audits",
+    "title_zh": "商務稽核",
+    "content_en": "Track and manage business audits.\n\nViewing Audits:\n1. Go to 'Business' > 'Audits'\n2. View all audit records\n\nAudit Types:\n- Internal Audits: Self-assessments\n- External Audits: Third-party reviews\n- Compliance Audits: Regulatory checks\n\nCreating Audit:\n1. Click 'New Audit'\n2. Select audit type\n3. Set date range\n4. Assign auditor\n5. Add audit scope and notes\n6. Click 'Create'",
+    "content_zh": "追蹤和管理商務稽核。\n\n查看稽核：\n1. 前往「商務」>「稽核」\n2. 查看所有稽核記錄\n\n稽核類型：\n- 內部稽核：自我評估\n- 外部稽核：第三方審查\n- 合規稽核：法規檢查\n\n建立稽核：\n1. 點擊「新增稽核」\n2. 選擇稽核類型\n3. 設定日期範圍\n4. 指派稽核人員\n5. 新增稽核範圍和備註\n6. 點擊「建立」",
+    "category": "business"
+  },
+  {
+    "id": "biz-003",
+    "title_en": "Tax Returns",
+    "title_zh": "稅務申報",
+    "content_en": "Manage and file tax returns.\n\nViewing Tax Returns:\n1. Go to 'Business' > 'Tax Returns'\n2. View all tax return records\n\nFiling Process:\n1. Click 'New Tax Return'\n2. Select tax period\n3. System auto-calculates based on transactions\n4. Review and adjust if needed\n5. Click 'Submit' or 'Save Draft'\n\nStatuses:\n- Draft: In preparation\n- Submitted: Filed with authority\n- Accepted: Confirmed by authority\n- Rejected: Needs correction",
+    "content_zh": "管理和提交稅務申報。\n\n查看稅務申報：\n1. 前往「商務」>「稅務申報」\n2. 查看所有稅務申報記錄\n\n申報流程：\n1. 點擊「新增稅務申報」\n2. 選擇稅期\n3. 系統根據交易自動計算\n4. 審核並視需要調整\n5. 點擊「提交」或「儲存草稿」\n\n狀態：\n- 草稿：準備中\n- 已提交：已向主管機關提交\n- 已接受：主管機關確認\n- 已退回：需要更正",
+    "category": "business"
+  },
+  {
+    "id": "biz-004",
+    "title_en": "Billable Hours Tracking",
+    "title_zh": "計費時數追蹤",
+    "content_en": "Track billable hours for client projects.\n\nLogging Hours:\n1. Go to 'Business' > 'Billable Hours'\n2. Click 'Log Time'\n3. Select client/project\n4. Enter hours worked\n5. Add description of work\n6. Click 'Save'\n\nReports:\n- View by client, project, or employee\n- Export for invoicing\n- Track against budgets\n\nBilling Rates:\n- Set default hourly rates\n- Override for specific clients\n- Support multiple currencies",
+    "content_zh": "追蹤客戶專案的計費時數。\n\n記錄時數：\n1. 前往「商務」>「計費時數」\n2. 點擊「記錄時間」\n3. 選擇客戶/專案\n4. 輸入工作時數\n5. 新增工作描述\n6. 點擊「儲存」\n\n報表：\n- 按客戶、專案或員工查看\n- 匯出用於開立發票\n- 對照預算追蹤\n\n計費費率：\n- 設定預設時薪\n- 針對特定客戶覆蓋設定\n- 支援多種幣別",
+    "category": "business"
+  },
+  {
+    "id": "biz-005",
+    "title_en": "Revenue Overview",
+    "title_zh": "營收總覽",
+    "content_en": "Get insights into your business revenue.\n\nViewing Revenue:\n1. Go to 'Business' > 'Revenue'\n2. View revenue dashboard\n\nMetrics Available:\n- Total Revenue: All-time earnings\n- Monthly Revenue: Current month breakdown\n- Revenue by Source: Product/service breakdown\n- Growth Rate: Period-over-period comparison\n\nFilters:\n- Date range selection\n- Revenue source filter\n- Customer segment filter\n- Export to Excel/PDF",
+    "content_zh": "獲取業務營收洞察。\n\n查看營收：\n1. 前往「商務」>「營收」\n2. 查看營收儀表板\n\n可用指標：\n- 總營收：所有時期收入\n- 月營收：當月細分\n- 營收來源：產品/服務細分\n- 成長率：期間對比\n\n篩選器：\n- 日期範圍選擇\n- 營收來源篩選\n- 客戶區段篩選\n- 匯出至 Excel/PDF",
+    "category": "business"
+  },
+  {
+    "id": "fin-001",
+    "title_en": "Finance Overview",
+    "title_zh": "財務總覽",
+    "content_en": "Get a comprehensive view of your finances.\n\nViewing Finance Overview:\n1. Go to 'Finance' > 'Overview'\n2. View key financial metrics\n\nDashboard Includes:\n- Cash Flow: Income vs Expenses\n- Account Balances: Bank and cash accounts\n- Receivables: Outstanding invoices\n- Payables: Bills to pay\n- Budget Status: Actual vs planned\n\nQuick Actions:\n- Record payment\n- Create invoice\n- Log expense",
+    "content_zh": "獲取財務全面總覽。\n\n查看財務總覽：\n1. 前往「財務」>「總覽」\n2. 查看關鍵財務指標\n\n儀表板包含：\n- 現金流：收入 vs 支出\n- 帳戶餘額：銀行和現金帳戶\n- 應收帳款：未結發票\n- 應付帳款：待付帳單\n- 預算狀態：實際 vs 計畫\n\n快速操作：\n- 記錄收款\n- 建立發票\n- 記錄費用",
+    "category": "finance"
+  },
+  {
+    "id": "doc-001",
+    "title_en": "Document Management",
+    "title_zh": "文件管理",
+    "content_en": "Store and organize business documents.\n\nUploading Documents:\n1. Go to 'Documents'\n2. Click 'Upload'\n3. Select files or drag and drop\n4. Add tags and categories\n5. Click 'Upload'\n\nOrganization:\n- Create folders for organization\n- Tag documents for easy search\n- Set access permissions\n\nSupported Formats:\n- PDF, Word, Excel, Images\n- Maximum file size: 50MB\n- Bulk upload supported",
+    "content_zh": "儲存和組織商業文件。\n\n上傳文件：\n1. 前往「文件」\n2. 點擊「上傳」\n3. 選擇檔案或拖放\n4. 新增標籤和類別\n5. 點擊「上傳」\n\n組織方式：\n- 建立資料夾整理\n- 標記文件便於搜尋\n- 設定存取權限\n\n支援格式：\n- PDF、Word、Excel、圖片\n- 檔案大小上限：50MB\n- 支援批次上傳",
+    "category": "documents"
+  },
+  {
+    "id": "set-001",
+    "title_en": "User Profile Settings",
+    "title_zh": "使用者個人設定",
+    "content_en": "Manage your personal profile settings.\n\nAccessing Profile:\n1. Click your avatar in top right\n2. Select 'Profile' or 'Settings'\n\nEditable Information:\n- Full name\n- Email (view only)\n- Phone number\n- Profile picture\n- Timezone\n- Language preference\n\nSecurity:\n- Change password\n- Enable two-factor authentication\n- View active sessions",
+    "content_zh": "管理您的個人資料設定。\n\n存取個人資料：\n1. 點擊右上角的頭像\n2. 選擇「個人資料」或「設定」\n\n可編輯資訊：\n- 全名\n- 電子郵件（僅檢視）\n- 電話號碼\n- 個人頭像\n- 時區\n- 語言偏好\n\n安全性：\n- 變更密碼\n- 啟用兩步驟驗證\n- 查看活動中的工作階段",
+    "category": "settings"
+  },
+  {
+    "id": "set-002",
+    "title_en": "Notification Settings",
+    "title_zh": "通知設定",
+    "content_en": "Configure how you receive notifications.\n\nAccessing Notifications:\n1. Go to 'Settings' > 'Notifications'\n\nNotification Types:\n- Email Notifications: Receive by email\n- Push Notifications: Browser/app alerts\n- SMS Notifications: Text messages\n\nConfigurable Events:\n- Task assignments\n- Invoice received\n- Payment due\n- System updates\n- Weekly digest\n- Monthly reports",
+    "content_zh": "設定您接收通知的方式。\n\n存取通知設定：\n1. 前往「設定」>「通知」\n\n通知類型：\n- 電子郵件通知：透過電子郵件接收\n- 推送通知：瀏覽器/應用程式提醒\n- 簡訊通知：文字訊息\n\n可設定的事件：\n- 任務指派\n- 收到發票\n- 付款到期\n- 系統更新\n- 每週摘要\n- 月度報告",
+    "category": "settings"
+  },
+  {
+    "id": "set-003",
+    "title_en": "Subscription Plans",
+    "title_zh": "訂閱方案",
+    "content_en": "View and manage your subscription.\n\nViewing Subscription:\n1. Go to 'Settings' > 'Billing'\n2. View current plan details\n\nAvailable Plans:\n- Free: Basic features, 1 user\n- Pro: Advanced features, AI assistant, 10 users\n- Pro+ Enterprise: Unlimited users, SSO, custom branding\n\nUpgrading:\n1. Click 'Upgrade Plan'\n2. Select desired plan\n3. Choose billing cycle (monthly/yearly)\n4. Enter payment details\n5. Confirm subscription",
+    "content_zh": "查看和管理您的訂閱。\n\n查看訂閱：\n1. 前往「設定」>「帳單」\n2. 查看目前方案詳情\n\n可用方案：\n- 免費版：基本功能，1 位使用者\n- 專業版：進階功能，AI 助理，10 位使用者\n- Pro+ 企業版：無限使用者，SSO，自訂品牌\n\n升級：\n1. 點擊「升級方案」\n2. 選擇所需方案\n3. 選擇帳單週期（月繳/年繳）\n4. 輸入付款資訊\n5. 確認訂閱",
+    "category": "settings"
+  },
+  {
+    "id": "rep-001",
+    "title_en": "Generating Reports",
+    "title_zh": "生成報表",
+    "content_en": "Create various business reports.\n\nAvailable Reports:\n- Financial Reports: P&L, Balance Sheet, Cash Flow\n- Sales Reports: Revenue, Pipeline, Forecasts\n- HR Reports: Headcount, Turnover, Leave balances\n- Project Reports: Progress, Resource utilization\n\nGenerating a Report:\n1. Go to relevant module\n2. Click 'Reports'\n3. Select report type\n4. Set parameters (date range, filters)\n5. Click 'Generate'\n6. View online or export",
+    "content_zh": "建立各種業務報表。\n\n可用報表：\n- 財務報表：損益表、資產負債表、現金流量表\n- 銷售報表：營收、銷售漏斗、預測\n- 人資報表：人數、離職率、休假餘額\n- 專案報表：進度、資源利用率\n\n生成報表：\n1. 前往相關模組\n2. 點擊「報表」\n3. 選擇報表類型\n4. 設定參數（日期範圍、篩選條件）\n5. 點擊「生成」\n6. 線上檢視或匯出",
+    "category": "reports"
+  },
+  {
+    "id": "sec-001",
+    "title_en": "Account Security",
+    "title_zh": "帳號安全",
+    "content_en": "Keep your account secure.\n\nSecurity Features:\n1. Strong Password: Use complex passwords\n2. Two-Factor Auth: Add extra verification\n3. Session Management: Review active sessions\n\nEnabling 2FA:\n1. Go to 'Settings' > 'Security'\n2. Click 'Enable Two-Factor Authentication'\n3. Scan QR code with authenticator app\n4. Enter verification code\n5. Save backup codes\n\nBest Practices:\n- Change password regularly\n- Don't share credentials\n- Log out from shared devices",
+    "content_zh": "保護您的帳號安全。\n\n安全功能：\n1. 強密碼：使用複雜密碼\n2. 兩步驟驗證：新增額外驗證\n3. 工作階段管理：審查活動中的工作階段\n\n啟用兩步驟驗證：\n1. 前往「設定」>「安全性」\n2. 點擊「啟用兩步驟驗證」\n3. 用驗證器應用程式掃描 QR 碼\n4. 輸入驗證碼\n5. 儲存備用碼\n\n最佳實務：\n- 定期變更密碼\n- 不要分享憑證\n- 從共用裝置登出",
+    "category": "settings"
+  }
+]

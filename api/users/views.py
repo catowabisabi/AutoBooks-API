@@ -133,3 +133,133 @@ class UserSettingsViewSet(viewsets.ViewSet):
             'success': False,
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for subscription plans (public read-only)"""
+    queryset = SubscriptionPlan.objects.filter(is_active=True).order_by('sort_order')
+    serializer_class = SubscriptionPlanSerializer
+    permission_classes = [AllowAny]
+    
+    def list(self, request):
+        """List all active subscription plans"""
+        plans = self.get_queryset()
+        serializer = self.get_serializer(plans, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data
+        })
+    
+    def retrieve(self, request, pk=None):
+        """Get a specific subscription plan"""
+        try:
+            plan = self.get_queryset().get(pk=pk)
+            serializer = self.get_serializer(plan)
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+        except SubscriptionPlan.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Plan not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+
+class UserSubscriptionViewSet(viewsets.ViewSet):
+    """ViewSet for user subscription management"""
+    permission_classes = [IsAuthenticated]
+    
+    def list(self, request):
+        """Get current user's subscription"""
+        try:
+            subscription = UserSubscription.objects.get(user=request.user)
+            serializer = UserSubscriptionSerializer(subscription)
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+        except UserSubscription.DoesNotExist:
+            # Return free plan info if no subscription
+            try:
+                free_plan = SubscriptionPlan.objects.get(plan_type='free')
+                return Response({
+                    'success': True,
+                    'data': {
+                        'plan': SubscriptionPlanSerializer(free_plan).data,
+                        'status': 'none',
+                        'message': 'No active subscription'
+                    }
+                })
+            except SubscriptionPlan.DoesNotExist:
+                return Response({
+                    'success': True,
+                    'data': {
+                        'status': 'none',
+                        'message': 'No subscription plans available'
+                    }
+                })
+    
+    @action(detail=False, methods=['post'], url_path='subscribe')
+    def subscribe(self, request):
+        """Subscribe to a plan"""
+        plan_id = request.data.get('plan_id')
+        billing_cycle = request.data.get('billing_cycle', 'monthly')
+        
+        if not plan_id:
+            return Response({
+                'success': False,
+                'error': 'plan_id is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            plan = SubscriptionPlan.objects.get(pk=plan_id, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Plan not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Create or update subscription
+        today = timezone.now().date()
+        trial_days = 14 if plan.plan_type != 'free' else 0
+        
+        subscription, created = UserSubscription.objects.update_or_create(
+            user=request.user,
+            defaults={
+                'plan': plan,
+                'status': 'trial' if trial_days > 0 else 'active',
+                'billing_cycle': billing_cycle,
+                'start_date': today,
+                'trial_end_date': today + timedelta(days=trial_days) if trial_days > 0 else None,
+                'next_billing_date': today + timedelta(days=trial_days) if trial_days > 0 else today + timedelta(days=30 if billing_cycle == 'monthly' else 365),
+            }
+        )
+        
+        serializer = UserSubscriptionSerializer(subscription)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': f'Successfully subscribed to {plan.name}'
+        })
+    
+    @action(detail=False, methods=['post'], url_path='cancel')
+    def cancel(self, request):
+        """Cancel subscription"""
+        try:
+            subscription = UserSubscription.objects.get(user=request.user)
+            subscription.status = 'cancelled'
+            subscription.cancelled_at = timezone.now()
+            subscription.save()
+            
+            serializer = UserSubscriptionSerializer(subscription)
+            return Response({
+                'success': True,
+                'data': serializer.data,
+                'message': 'Subscription cancelled successfully'
+            })
+        except UserSubscription.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'No active subscription found'
+            }, status=status.HTTP_404_NOT_FOUND)
