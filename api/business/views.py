@@ -346,3 +346,301 @@ class DashboardOverviewView(APIView):
                 revenues.order_by('-created_at')[:5], many=True
             ).data,
         })
+
+
+# =================================================================
+# Financial PR & IPO Advisory ViewSets
+# =================================================================
+
+from .models import (
+    ListedClient, Announcement, MediaCoverage, IPOMandate,
+    ServiceRevenue, ActiveEngagement, ClientPerformance,
+    ClientIndustry, MediaSentimentRecord, RevenueTrend
+)
+from .serializers import (
+    ListedClientSerializer, ListedClientListSerializer,
+    AnnouncementSerializer, AnnouncementListSerializer,
+    MediaCoverageSerializer, MediaCoverageListSerializer,
+    IPOMandateSerializer, IPOMandateListSerializer,
+    ServiceRevenueSerializer, ServiceRevenueListSerializer,
+    ActiveEngagementSerializer, ActiveEngagementListSerializer,
+    ClientPerformanceSerializer, ClientPerformanceListSerializer,
+    ClientIndustrySerializer, MediaSentimentRecordSerializer,
+    RevenueTrendSerializer
+)
+
+
+class ListedClientViewSet(viewsets.ModelViewSet):
+    """ViewSet for ListedClient CRUD operations"""
+    queryset = ListedClient.objects.select_related('company').all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'exchange', 'sector']
+    search_fields = ['company__name', 'stock_code', 'primary_contact']
+    ordering_fields = ['stock_code', 'market_cap', 'annual_retainer', 'created_at']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ListedClientListSerializer
+        return ListedClientSerializer
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get listed clients summary"""
+        qs = self.get_queryset()
+        return Response({
+            'total': qs.count(),
+            'active': qs.filter(status='ACTIVE').count(),
+            'by_exchange': list(qs.values('exchange').annotate(count=Count('id'))),
+            'by_sector': list(qs.values('sector').annotate(count=Count('id'))),
+            'total_retainer': str(qs.aggregate(total=Sum('annual_retainer'))['total'] or 0),
+        })
+
+
+class AnnouncementViewSet(viewsets.ModelViewSet):
+    """ViewSet for Announcement CRUD operations"""
+    queryset = Announcement.objects.select_related('listed_client__company', 'handler').all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['announcement_type', 'status', 'listed_client', 'handler']
+    search_fields = ['title', 'listed_client__company__name', 'listed_client__stock_code']
+    ordering_fields = ['publish_date', 'deadline', 'created_at']
+    ordering = ['-publish_date']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return AnnouncementListSerializer
+        return AnnouncementSerializer
+    
+    @action(detail=False, methods=['get'])
+    def this_month(self, request):
+        """Get announcements for this month"""
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        qs = self.get_queryset().filter(
+            publish_date__gte=start_of_month,
+            publish_date__lte=today
+        )
+        return Response({
+            'count': qs.count(),
+            'by_type': list(qs.values('announcement_type').annotate(count=Count('id'))),
+            'announcements': AnnouncementListSerializer(qs[:10], many=True).data
+        })
+
+
+class MediaCoverageViewSet(viewsets.ModelViewSet):
+    """ViewSet for MediaCoverage CRUD operations"""
+    queryset = MediaCoverage.objects.select_related('listed_client__company', 'company').all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['sentiment', 'is_press_release', 'listed_client', 'company']
+    search_fields = ['title', 'media_outlet', 'listed_client__company__name']
+    ordering_fields = ['publish_date', 'reach', 'engagement', 'created_at']
+    ordering = ['-publish_date']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return MediaCoverageListSerializer
+        return MediaCoverageSerializer
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get media coverage summary"""
+        qs = self.get_queryset()
+        return Response({
+            'total': qs.count(),
+            'by_sentiment': list(qs.values('sentiment').annotate(count=Count('id'))),
+            'total_reach': qs.aggregate(total=Sum('reach'))['total'] or 0,
+            'total_engagement': qs.aggregate(total=Sum('engagement'))['total'] or 0,
+        })
+
+
+class IPOMandateViewSet(viewsets.ModelViewSet):
+    """ViewSet for IPOMandate CRUD operations"""
+    queryset = IPOMandate.objects.select_related('company', 'lead_partner').all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['stage', 'target_exchange', 'deal_size_category', 'is_sfc_approved', 'lead_partner']
+    search_fields = ['project_name', 'company__name']
+    ordering_fields = ['deal_size', 'probability', 'target_listing_date', 'created_at']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return IPOMandateListSerializer
+        return IPOMandateSerializer
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get IPO mandate summary"""
+        qs = self.get_queryset()
+        total_pipeline = qs.aggregate(total=Sum('deal_size'))['total'] or Decimal('0')
+        total_fees = qs.aggregate(total=Sum('estimated_fee'))['total'] or Decimal('0')
+        
+        # SFC stats
+        sfc_submitted = qs.filter(sfc_application_date__isnull=False).count()
+        sfc_approved = qs.filter(is_sfc_approved=True).count()
+        sfc_rate = (sfc_approved / sfc_submitted * 100) if sfc_submitted > 0 else 0
+        
+        return Response({
+            'total': qs.count(),
+            'active': qs.exclude(stage__in=['LISTING', 'POST_IPO', 'WITHDRAWN']).count(),
+            'by_stage': list(qs.values('stage').annotate(count=Count('id'))),
+            'by_deal_size': list(qs.values('deal_size_category').annotate(count=Count('id'))),
+            'total_pipeline_value': str(total_pipeline),
+            'total_estimated_fees': str(total_fees),
+            'sfc_approval_rate': round(sfc_rate, 1),
+        })
+    
+    @action(detail=False, methods=['get'])
+    def deal_funnel(self, request):
+        """Get deal funnel data"""
+        qs = self.get_queryset()
+        stages = [
+            'INITIAL_CONTACT', 'PITCH', 'MANDATE_WON', 'PREPARATION',
+            'A1_FILING', 'HKEX_REVIEW', 'SFC_REVIEW', 'HEARING',
+            'ROADSHOW', 'LISTING'
+        ]
+        funnel = []
+        for stage in stages:
+            count = qs.filter(stage=stage).count()
+            value = qs.filter(stage=stage).aggregate(total=Sum('deal_size'))['total'] or 0
+            funnel.append({
+                'stage': stage,
+                'count': count,
+                'value': str(value)
+            })
+        return Response(funnel)
+
+
+class ServiceRevenueViewSet(viewsets.ModelViewSet):
+    """ViewSet for ServiceRevenue CRUD operations"""
+    queryset = ServiceRevenue.objects.select_related('company').all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['service_type', 'period_year', 'period_month', 'company']
+    search_fields = ['company__name']
+    ordering_fields = ['period_year', 'period_month', 'amount', 'created_at']
+    ordering = ['-period_year', '-period_month']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ServiceRevenueListSerializer
+        return ServiceRevenueSerializer
+    
+    @action(detail=False, methods=['get'])
+    def by_service(self, request):
+        """Get revenue breakdown by service type"""
+        year = request.query_params.get('year', timezone.now().year)
+        qs = self.get_queryset().filter(period_year=year)
+        return Response(list(
+            qs.values('service_type').annotate(
+                total_amount=Sum('amount'),
+                total_hours=Sum('billable_hours')
+            ).order_by('-total_amount')
+        ))
+
+
+class ActiveEngagementViewSet(viewsets.ModelViewSet):
+    """ViewSet for ActiveEngagement CRUD operations"""
+    queryset = ActiveEngagement.objects.select_related('company', 'lead').all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['engagement_type', 'status', 'company', 'lead']
+    search_fields = ['title', 'company__name']
+    ordering_fields = ['start_date', 'value', 'progress', 'created_at']
+    ordering = ['-start_date']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ActiveEngagementListSerializer
+        return ActiveEngagementSerializer
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get active engagements summary"""
+        qs = self.get_queryset()
+        active = qs.filter(status='ACTIVE')
+        return Response({
+            'total': qs.count(),
+            'active_count': active.count(),
+            'total_value': str(active.aggregate(total=Sum('value'))['total'] or 0),
+            'by_type': list(active.values('engagement_type').annotate(count=Count('id'))),
+            'avg_progress': active.aggregate(avg=Sum('progress') / Count('id'))['avg'] or 0,
+        })
+
+
+class ClientPerformanceViewSet(viewsets.ModelViewSet):
+    """ViewSet for ClientPerformance CRUD operations"""
+    queryset = ClientPerformance.objects.select_related('company').all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['period_year', 'period_quarter', 'company']
+    search_fields = ['company__name']
+    ordering_fields = ['period_year', 'period_quarter', 'revenue_generated', 'satisfaction_score']
+    ordering = ['-period_year', '-period_quarter']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ClientPerformanceListSerializer
+        return ClientPerformanceSerializer
+
+
+class ClientIndustryViewSet(viewsets.ModelViewSet):
+    """ViewSet for ClientIndustry CRUD operations"""
+    queryset = ClientIndustry.objects.all()
+    serializer_class = ClientIndustrySerializer
+    permission_classes = get_permission_classes()
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'code']
+    ordering_fields = ['name', 'client_count', 'total_revenue']
+    ordering = ['name']
+
+
+class MediaSentimentRecordViewSet(viewsets.ModelViewSet):
+    """ViewSet for MediaSentimentRecord CRUD operations"""
+    queryset = MediaSentimentRecord.objects.all()
+    serializer_class = MediaSentimentRecordSerializer
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['period_date']
+    ordering_fields = ['period_date', 'sentiment_score']
+    ordering = ['-period_date']
+    
+    @action(detail=False, methods=['get'])
+    def trend(self, request):
+        """Get sentiment trend over time"""
+        days = int(request.query_params.get('days', 30))
+        end_date = timezone.now().date()
+        start_date = end_date - timezone.timedelta(days=days)
+        qs = self.get_queryset().filter(
+            period_date__gte=start_date,
+            period_date__lte=end_date
+        ).order_by('period_date')
+        return Response(MediaSentimentRecordSerializer(qs, many=True).data)
+
+
+class RevenueTrendViewSet(viewsets.ModelViewSet):
+    """ViewSet for RevenueTrend CRUD operations"""
+    queryset = RevenueTrend.objects.all()
+    serializer_class = RevenueTrendSerializer
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['period_year', 'period_month']
+    ordering_fields = ['period_year', 'period_month', 'total_revenue']
+    ordering = ['-period_year', '-period_month']
+    
+    @action(detail=False, methods=['get'])
+    def yearly(self, request):
+        """Get yearly revenue summary"""
+        qs = self.get_queryset()
+        return Response(list(
+            qs.values('period_year').annotate(
+                total=Sum('total_revenue'),
+                recurring=Sum('recurring_revenue'),
+                project=Sum('project_revenue'),
+                new_clients=Sum('new_clients'),
+                churned=Sum('churned_clients')
+            ).order_by('-period_year')
+        ))

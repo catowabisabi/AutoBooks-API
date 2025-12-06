@@ -478,3 +478,568 @@ class BMIDocument(BaseModel):
     
     def __str__(self):
         return f"{self.file_name} - {self.bmi_project.project_name}"
+
+
+# =================================================================
+# Financial PR & IPO Advisory Models
+# =================================================================
+
+class ListedClientStatus(str, Enum):
+    """Listed client status"""
+    ACTIVE = 'ACTIVE'
+    INACTIVE = 'INACTIVE'
+    PROSPECT = 'PROSPECT'
+    CHURNED = 'CHURNED'
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class AnnouncementType(str, Enum):
+    """Announcement type"""
+    RESULTS = 'RESULTS'
+    INTERIM_RESULTS = 'INTERIM_RESULTS'
+    PROFIT_WARNING = 'PROFIT_WARNING'
+    INSIDE_INFO = 'INSIDE_INFO'
+    NOTIFIABLE_TRANSACTION = 'NOTIFIABLE_TRANSACTION'
+    CONNECTED_TRANSACTION = 'CONNECTED_TRANSACTION'
+    SHARE_REPURCHASE = 'SHARE_REPURCHASE'
+    DIVIDEND = 'DIVIDEND'
+    AGM_EGM = 'AGM_EGM'
+    OTHER = 'OTHER'
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class MediaSentimentType(str, Enum):
+    """Media sentiment type"""
+    POSITIVE = 'POSITIVE'
+    NEUTRAL = 'NEUTRAL'
+    NEGATIVE = 'NEGATIVE'
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class IPOStageType(str, Enum):
+    """IPO stage type"""
+    INITIAL_CONTACT = 'INITIAL_CONTACT'
+    PITCH = 'PITCH'
+    MANDATE_WON = 'MANDATE_WON'
+    PREPARATION = 'PREPARATION'
+    A1_FILING = 'A1_FILING'
+    HKEX_REVIEW = 'HKEX_REVIEW'
+    SFC_REVIEW = 'SFC_REVIEW'
+    HEARING = 'HEARING'
+    ROADSHOW = 'ROADSHOW'
+    LISTING = 'LISTING'
+    POST_IPO = 'POST_IPO'
+    WITHDRAWN = 'WITHDRAWN'
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class DealSizeCategory(str, Enum):
+    """Deal size category"""
+    SMALL = 'SMALL'           # < HK$500M
+    MEDIUM = 'MEDIUM'         # HK$500M - 2B
+    LARGE = 'LARGE'           # HK$2B - 5B
+    MEGA = 'MEGA'             # > HK$5B
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class ListedClient(BaseModel):
+    """
+    上市公司客戶
+    Listed company clients for Financial PR
+    """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name='listed_client_records'
+    )
+    stock_code = models.CharField(max_length=20, help_text='Stock code e.g. 0001.HK')
+    exchange = models.CharField(
+        max_length=20,
+        default='HKEX',
+        help_text='Stock exchange: HKEX, NYSE, NASDAQ, etc.'
+    )
+    sector = models.CharField(max_length=100, blank=True)
+    market_cap = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Market capitalization in HKD'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=ListedClientStatus.choices(),
+        default=ListedClientStatus.ACTIVE.value
+    )
+    contract_start_date = models.DateField(null=True, blank=True)
+    contract_end_date = models.DateField(null=True, blank=True)
+    annual_retainer = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Annual retainer fee'
+    )
+    primary_contact = models.CharField(max_length=255, blank=True)
+    contact_email = models.EmailField(blank=True)
+    contact_phone = models.CharField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Listed Client'
+        verbose_name_plural = 'Listed Clients'
+    
+    def __str__(self):
+        return f"{self.company.name} ({self.stock_code})"
+
+
+class Announcement(BaseModel):
+    """
+    公告記錄
+    Corporate announcements tracking
+    """
+    listed_client = models.ForeignKey(
+        ListedClient,
+        on_delete=models.CASCADE,
+        related_name='announcements'
+    )
+    announcement_type = models.CharField(
+        max_length=30,
+        choices=AnnouncementType.choices(),
+        default=AnnouncementType.OTHER.value
+    )
+    title = models.CharField(max_length=500)
+    publish_date = models.DateField()
+    deadline = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        default='DRAFT',
+        help_text='DRAFT, IN_REVIEW, APPROVED, PUBLISHED'
+    )
+    handler = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='handled_announcements'
+    )
+    word_count = models.IntegerField(default=0)
+    languages = models.CharField(
+        max_length=50,
+        default='EN,TC',
+        help_text='Languages: EN, TC, SC'
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-publish_date', '-created_at']
+        verbose_name = 'Announcement'
+        verbose_name_plural = 'Announcements'
+    
+    def __str__(self):
+        return f"{self.listed_client.stock_code} - {self.title[:50]}"
+
+
+class MediaCoverage(BaseModel):
+    """
+    媒體報導記錄
+    Media coverage tracking
+    """
+    listed_client = models.ForeignKey(
+        ListedClient,
+        on_delete=models.CASCADE,
+        related_name='media_coverages',
+        null=True,
+        blank=True
+    )
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='media_coverages',
+        null=True,
+        blank=True
+    )
+    title = models.CharField(max_length=500)
+    media_outlet = models.CharField(max_length=255)
+    publish_date = models.DateField()
+    url = models.URLField(blank=True)
+    sentiment = models.CharField(
+        max_length=20,
+        choices=MediaSentimentType.choices(),
+        default=MediaSentimentType.NEUTRAL.value
+    )
+    reach = models.IntegerField(
+        default=0,
+        help_text='Estimated audience reach'
+    )
+    engagement = models.IntegerField(
+        default=0,
+        help_text='Social media engagement count'
+    )
+    is_press_release = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-publish_date', '-created_at']
+        verbose_name = 'Media Coverage'
+        verbose_name_plural = 'Media Coverages'
+    
+    def __str__(self):
+        return f"{self.media_outlet} - {self.title[:50]}"
+
+
+class IPOMandate(BaseModel):
+    """
+    IPO 項目委託
+    IPO mandate tracking for IPO advisory
+    """
+    project_name = models.CharField(max_length=255)
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name='ipo_mandates'
+    )
+    stage = models.CharField(
+        max_length=30,
+        choices=IPOStageType.choices(),
+        default=IPOStageType.INITIAL_CONTACT.value
+    )
+    target_exchange = models.CharField(
+        max_length=20,
+        default='HKEX',
+        help_text='Target exchange: HKEX, NYSE, NASDAQ, etc.'
+    )
+    target_board = models.CharField(
+        max_length=30,
+        default='MAIN',
+        help_text='MAIN, GEM, etc.'
+    )
+    deal_size = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Expected deal size in HKD'
+    )
+    deal_size_category = models.CharField(
+        max_length=20,
+        choices=DealSizeCategory.choices(),
+        default=DealSizeCategory.MEDIUM.value
+    )
+    fee_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Fee as percentage of deal size'
+    )
+    estimated_fee = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    probability = models.IntegerField(
+        default=50,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Win probability percentage'
+    )
+    
+    # Timeline
+    pitch_date = models.DateField(null=True, blank=True)
+    mandate_date = models.DateField(null=True, blank=True)
+    target_listing_date = models.DateField(null=True, blank=True)
+    actual_listing_date = models.DateField(null=True, blank=True)
+    
+    # Team
+    lead_partner = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='led_ipo_mandates'
+    )
+    
+    # SFC tracking
+    sfc_application_date = models.DateField(null=True, blank=True)
+    sfc_approval_date = models.DateField(null=True, blank=True)
+    is_sfc_approved = models.BooleanField(default=False)
+    
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'IPO Mandate'
+        verbose_name_plural = 'IPO Mandates'
+    
+    def __str__(self):
+        return f"{self.project_name} - {self.stage}"
+
+
+class ServiceRevenue(BaseModel):
+    """
+    服務收入分類
+    Revenue breakdown by service type
+    """
+    SERVICE_TYPES = [
+        ('IPO_ADVISORY', 'IPO Advisory'),
+        ('FINANCIAL_PR', 'Financial PR'),
+        ('INVESTOR_RELATIONS', 'Investor Relations'),
+        ('RESULTS_ANNOUNCEMENT', 'Results Announcement'),
+        ('TRANSACTION_SUPPORT', 'Transaction Support'),
+        ('CRISIS_MANAGEMENT', 'Crisis Management'),
+        ('ESG_ADVISORY', 'ESG Advisory'),
+        ('MEDIA_TRAINING', 'Media Training'),
+        ('OTHER', 'Other'),
+    ]
+    
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name='service_revenues',
+        null=True,
+        blank=True
+    )
+    service_type = models.CharField(
+        max_length=30,
+        choices=SERVICE_TYPES,
+        default='OTHER'
+    )
+    period_year = models.IntegerField(help_text='Year')
+    period_month = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+        help_text='Month (1-12)'
+    )
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    billable_hours = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-period_year', '-period_month']
+        verbose_name = 'Service Revenue'
+        verbose_name_plural = 'Service Revenues'
+        unique_together = ['company', 'service_type', 'period_year', 'period_month']
+    
+    def __str__(self):
+        return f"{self.service_type} - {self.period_year}/{self.period_month}"
+
+
+class ActiveEngagement(BaseModel):
+    """
+    活躍專案
+    Active client engagements
+    """
+    ENGAGEMENT_TYPES = [
+        ('RETAINER', 'Retainer'),
+        ('PROJECT', 'Project'),
+        ('AD_HOC', 'Ad-hoc'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('PAUSED', 'Paused'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+    
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name='engagements'
+    )
+    title = models.CharField(max_length=255)
+    engagement_type = models.CharField(
+        max_length=20,
+        choices=ENGAGEMENT_TYPES,
+        default='PROJECT'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='ACTIVE'
+    )
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    value = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    progress = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    lead = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='led_engagements'
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-start_date', '-created_at']
+        verbose_name = 'Active Engagement'
+        verbose_name_plural = 'Active Engagements'
+    
+    def __str__(self):
+        return f"{self.company.name} - {self.title}"
+
+
+class ClientPerformance(BaseModel):
+    """
+    客戶績效指標
+    Client performance metrics
+    """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='performance_records'
+    )
+    period_year = models.IntegerField()
+    period_quarter = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(4)]
+    )
+    revenue_generated = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    satisfaction_score = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    projects_completed = models.IntegerField(default=0)
+    referrals_made = models.IntegerField(default=0)
+    response_time_hours = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Average response time in hours'
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-period_year', '-period_quarter']
+        verbose_name = 'Client Performance'
+        verbose_name_plural = 'Client Performances'
+        unique_together = ['company', 'period_year', 'period_quarter']
+    
+    def __str__(self):
+        return f"{self.company.name} - Q{self.period_quarter} {self.period_year}"
+
+
+class ClientIndustry(BaseModel):
+    """
+    客戶行業分布
+    Client industry distribution
+    """
+    name = models.CharField(max_length=100, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    description = models.TextField(blank=True)
+    color = models.CharField(
+        max_length=7,
+        default='#6366f1',
+        help_text='Hex color code for charts'
+    )
+    client_count = models.IntegerField(default=0)
+    total_revenue = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Client Industry'
+        verbose_name_plural = 'Client Industries'
+    
+    def __str__(self):
+        return self.name
+
+
+class MediaSentimentRecord(BaseModel):
+    """
+    媒體情緒記錄
+    Media sentiment tracking over time
+    """
+    period_date = models.DateField()
+    positive_count = models.IntegerField(default=0)
+    neutral_count = models.IntegerField(default=0)
+    negative_count = models.IntegerField(default=0)
+    total_reach = models.BigIntegerField(default=0)
+    total_engagement = models.BigIntegerField(default=0)
+    sentiment_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Overall sentiment score -100 to 100'
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-period_date']
+        verbose_name = 'Media Sentiment Record'
+        verbose_name_plural = 'Media Sentiment Records'
+    
+    def __str__(self):
+        return f"Sentiment {self.period_date}"
+
+
+class RevenueTrend(BaseModel):
+    """
+    收入趨勢
+    Monthly revenue trends
+    """
+    period_year = models.IntegerField()
+    period_month = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)]
+    )
+    total_revenue = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    recurring_revenue = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    project_revenue = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    new_clients = models.IntegerField(default=0)
+    churned_clients = models.IntegerField(default=0)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-period_year', '-period_month']
+        verbose_name = 'Revenue Trend'
+        verbose_name_plural = 'Revenue Trends'
+        unique_together = ['period_year', 'period_month']
+    
+    def __str__(self):
+        return f"Revenue {self.period_year}/{self.period_month}"
+

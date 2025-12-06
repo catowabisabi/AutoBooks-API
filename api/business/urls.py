@@ -13,6 +13,17 @@ from .views import (
     BMIIPOPRRecordViewSet,
     BMIDocumentViewSet,
     DashboardOverviewView,
+    # New Financial PR & IPO Advisory ViewSets
+    ListedClientViewSet,
+    AnnouncementViewSet,
+    MediaCoverageViewSet,
+    IPOMandateViewSet,
+    ServiceRevenueViewSet,
+    ActiveEngagementViewSet,
+    ClientPerformanceViewSet,
+    ClientIndustryViewSet,
+    MediaSentimentRecordViewSet,
+    RevenueTrendViewSet,
 )
 
 router = DefaultRouter()
@@ -23,6 +34,18 @@ router.register(r'billable-hours', BillableHourViewSet, basename='billable-hour'
 router.register(r'revenues', RevenueViewSet, basename='revenue')
 router.register(r'bmi-projects', BMIIPOPRRecordViewSet, basename='bmi-project')
 router.register(r'bmi-documents', BMIDocumentViewSet, basename='bmi-document')
+
+# Financial PR & IPO Advisory endpoints
+router.register(r'listed-clients', ListedClientViewSet, basename='listed-client')
+router.register(r'announcements', AnnouncementViewSet, basename='announcement')
+router.register(r'media-coverage', MediaCoverageViewSet, basename='media-coverage')
+router.register(r'ipo-mandates', IPOMandateViewSet, basename='ipo-mandate')
+router.register(r'service-revenues', ServiceRevenueViewSet, basename='service-revenue')
+router.register(r'engagements', ActiveEngagementViewSet, basename='engagement')
+router.register(r'client-performance', ClientPerformanceViewSet, basename='client-performance')
+router.register(r'client-industries', ClientIndustryViewSet, basename='client-industry')
+router.register(r'media-sentiment', MediaSentimentRecordViewSet, basename='media-sentiment')
+router.register(r'revenue-trends', RevenueTrendViewSet, basename='revenue-trend')
 
 urlpatterns = [
     path('', include(router.urls)),

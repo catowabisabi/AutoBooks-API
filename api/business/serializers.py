@@ -212,3 +212,257 @@ class OverviewStatsSerializer(serializers.Serializer):
     pending_revenue = serializers.DecimalField(max_digits=15, decimal_places=2)
     total_billable_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
     bmi_projects_active = serializers.IntegerField()
+
+
+# =================================================================
+# Financial PR & IPO Advisory Serializers
+# =================================================================
+
+from .models import (
+    ListedClient, Announcement, MediaCoverage, IPOMandate,
+    ServiceRevenue, ActiveEngagement, ClientPerformance,
+    ClientIndustry, MediaSentimentRecord, RevenueTrend
+)
+
+
+class ListedClientSerializer(serializers.ModelSerializer):
+    """Serializer for ListedClient model"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = ListedClient
+        fields = [
+            'id', 'company', 'company_name', 'stock_code', 'exchange',
+            'sector', 'market_cap', 'status', 'contract_start_date',
+            'contract_end_date', 'annual_retainer', 'primary_contact',
+            'contact_email', 'contact_phone', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ListedClientListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = ListedClient
+        fields = [
+            'id', 'company_name', 'stock_code', 'exchange', 'sector',
+            'market_cap', 'status', 'annual_retainer'
+        ]
+
+
+class AnnouncementSerializer(serializers.ModelSerializer):
+    """Serializer for Announcement model"""
+    listed_client_name = serializers.CharField(source='listed_client.company.name', read_only=True)
+    stock_code = serializers.CharField(source='listed_client.stock_code', read_only=True)
+    handler_name = serializers.CharField(source='handler.full_name', read_only=True)
+    
+    class Meta:
+        model = Announcement
+        fields = [
+            'id', 'listed_client', 'listed_client_name', 'stock_code',
+            'announcement_type', 'title', 'publish_date', 'deadline',
+            'status', 'handler', 'handler_name', 'word_count', 'languages',
+            'notes', 'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class AnnouncementListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    listed_client_name = serializers.CharField(source='listed_client.company.name', read_only=True)
+    stock_code = serializers.CharField(source='listed_client.stock_code', read_only=True)
+    handler_name = serializers.CharField(source='handler.full_name', read_only=True)
+    
+    class Meta:
+        model = Announcement
+        fields = [
+            'id', 'listed_client_name', 'stock_code', 'announcement_type',
+            'title', 'publish_date', 'status', 'handler_name'
+        ]
+
+
+class MediaCoverageSerializer(serializers.ModelSerializer):
+    """Serializer for MediaCoverage model"""
+    listed_client_name = serializers.CharField(source='listed_client.company.name', read_only=True)
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = MediaCoverage
+        fields = [
+            'id', 'listed_client', 'listed_client_name', 'company', 'company_name',
+            'title', 'media_outlet', 'publish_date', 'url', 'sentiment',
+            'reach', 'engagement', 'is_press_release', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class MediaCoverageListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    listed_client_name = serializers.CharField(source='listed_client.company.name', read_only=True)
+    
+    class Meta:
+        model = MediaCoverage
+        fields = [
+            'id', 'listed_client_name', 'title', 'media_outlet',
+            'publish_date', 'sentiment', 'reach', 'engagement'
+        ]
+
+
+class IPOMandateSerializer(serializers.ModelSerializer):
+    """Serializer for IPOMandate model"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    lead_partner_name = serializers.CharField(source='lead_partner.full_name', read_only=True)
+    
+    class Meta:
+        model = IPOMandate
+        fields = [
+            'id', 'project_name', 'company', 'company_name', 'stage',
+            'target_exchange', 'target_board', 'deal_size', 'deal_size_category',
+            'fee_percentage', 'estimated_fee', 'probability',
+            'pitch_date', 'mandate_date', 'target_listing_date', 'actual_listing_date',
+            'lead_partner', 'lead_partner_name',
+            'sfc_application_date', 'sfc_approval_date', 'is_sfc_approved',
+            'notes', 'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class IPOMandateListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    lead_partner_name = serializers.CharField(source='lead_partner.full_name', read_only=True)
+    
+    class Meta:
+        model = IPOMandate
+        fields = [
+            'id', 'project_name', 'company_name', 'stage', 'target_exchange',
+            'deal_size', 'deal_size_category', 'probability',
+            'target_listing_date', 'lead_partner_name', 'is_sfc_approved'
+        ]
+
+
+class ServiceRevenueSerializer(serializers.ModelSerializer):
+    """Serializer for ServiceRevenue model"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = ServiceRevenue
+        fields = [
+            'id', 'company', 'company_name', 'service_type',
+            'period_year', 'period_month', 'amount', 'billable_hours',
+            'notes', 'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ServiceRevenueListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = ServiceRevenue
+        fields = [
+            'id', 'company_name', 'service_type', 'period_year',
+            'period_month', 'amount', 'billable_hours'
+        ]
+
+
+class ActiveEngagementSerializer(serializers.ModelSerializer):
+    """Serializer for ActiveEngagement model"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    lead_name = serializers.CharField(source='lead.full_name', read_only=True)
+    
+    class Meta:
+        model = ActiveEngagement
+        fields = [
+            'id', 'company', 'company_name', 'title', 'engagement_type',
+            'status', 'start_date', 'end_date', 'value', 'progress',
+            'lead', 'lead_name', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ActiveEngagementListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    lead_name = serializers.CharField(source='lead.full_name', read_only=True)
+    
+    class Meta:
+        model = ActiveEngagement
+        fields = [
+            'id', 'company_name', 'title', 'engagement_type',
+            'status', 'start_date', 'value', 'progress', 'lead_name'
+        ]
+
+
+class ClientPerformanceSerializer(serializers.ModelSerializer):
+    """Serializer for ClientPerformance model"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = ClientPerformance
+        fields = [
+            'id', 'company', 'company_name', 'period_year', 'period_quarter',
+            'revenue_generated', 'satisfaction_score', 'projects_completed',
+            'referrals_made', 'response_time_hours', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class ClientPerformanceListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = ClientPerformance
+        fields = [
+            'id', 'company_name', 'period_year', 'period_quarter',
+            'revenue_generated', 'satisfaction_score', 'projects_completed'
+        ]
+
+
+class ClientIndustrySerializer(serializers.ModelSerializer):
+    """Serializer for ClientIndustry model"""
+    
+    class Meta:
+        model = ClientIndustry
+        fields = [
+            'id', 'name', 'code', 'description', 'color',
+            'client_count', 'total_revenue',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class MediaSentimentRecordSerializer(serializers.ModelSerializer):
+    """Serializer for MediaSentimentRecord model"""
+    
+    class Meta:
+        model = MediaSentimentRecord
+        fields = [
+            'id', 'period_date', 'positive_count', 'neutral_count',
+            'negative_count', 'total_reach', 'total_engagement',
+            'sentiment_score', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class RevenueTrendSerializer(serializers.ModelSerializer):
+    """Serializer for RevenueTrend model"""
+    
+    class Meta:
+        model = RevenueTrend
+        fields = [
+            'id', 'period_year', 'period_month', 'total_revenue',
+            'recurring_revenue', 'project_revenue',
+            'new_clients', 'churned_clients', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
