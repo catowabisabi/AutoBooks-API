@@ -44,6 +44,12 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=20, choices=Roles.choices, default=Roles.USER)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    
+    # Profile fields
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    avatar_url = models.URLField(blank=True, null=True)
+    timezone = models.CharField(max_length=50, default='Asia/Hong_Kong')
+    language = models.CharField(max_length=10, default='en')
 
     designation = models.ForeignKey(Designation, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name='users', null=True, blank=True)
@@ -77,3 +83,64 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class UserSettings(BaseModel):
+    """User settings including billing and notifications"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+    
+    # Notification Settings
+    email_notifications = models.BooleanField(default=True)
+    push_notifications = models.BooleanField(default=True)
+    sms_notifications = models.BooleanField(default=False)
+    
+    # Notification Types
+    notify_task_assigned = models.BooleanField(default=True)
+    notify_task_completed = models.BooleanField(default=True)
+    notify_invoice_received = models.BooleanField(default=True)
+    notify_payment_due = models.BooleanField(default=True)
+    notify_system_updates = models.BooleanField(default=True)
+    notify_security_alerts = models.BooleanField(default=True)
+    notify_weekly_digest = models.BooleanField(default=False)
+    notify_monthly_report = models.BooleanField(default=True)
+    
+    # Billing Settings
+    billing_email = models.EmailField(blank=True, null=True)
+    billing_address = models.TextField(blank=True, null=True)
+    billing_city = models.CharField(max_length=100, blank=True, null=True)
+    billing_country = models.CharField(max_length=100, blank=True, null=True)
+    billing_postal_code = models.CharField(max_length=20, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    tax_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Subscription Info
+    subscription_plan = models.CharField(max_length=50, default='free', choices=[
+        ('free', 'Free'),
+        ('starter', 'Starter'),
+        ('professional', 'Professional'),
+        ('enterprise', 'Enterprise'),
+    ])
+    subscription_status = models.CharField(max_length=20, default='active', choices=[
+        ('active', 'Active'),
+        ('cancelled', 'Cancelled'),
+        ('past_due', 'Past Due'),
+        ('trial', 'Trial'),
+    ])
+    subscription_start_date = models.DateField(blank=True, null=True)
+    subscription_end_date = models.DateField(blank=True, null=True)
+    
+    # Payment Method
+    payment_method_type = models.CharField(max_length=50, blank=True, null=True, choices=[
+        ('credit_card', 'Credit Card'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('paypal', 'PayPal'),
+    ])
+    payment_method_last_four = models.CharField(max_length=4, blank=True, null=True)
+    payment_method_expiry = models.CharField(max_length=7, blank=True, null=True)  # MM/YYYY
+
+    class Meta:
+        verbose_name = 'User Settings'
+        verbose_name_plural = 'User Settings'
+
+    def __str__(self):
+        return f"Settings for {self.user.email}"
