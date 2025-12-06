@@ -5,8 +5,8 @@ from documents.models.document import Document
 class DocumentUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
-        fields = ['id', 'file', 'original_filename']
+        fields = ['id', 'file', 'original_filename', 'uploaded_at', 'processed', 'ocr_text', 'language']
+        read_only_fields = ['id', 'uploaded_at', 'processed', 'ocr_text']
 
     def create(self, validated_data):
-        tenant = self.context['request'].user.tenant
-        return Document.objects.create(**validated_data, tenant=tenant)
+        return Document.objects.create(**validated_data)

@@ -5,11 +5,12 @@ ViewSets for Dashboards, Charts, Sales Analytics, and KPIs.
 """
 
 from decimal import Decimal
+from django.conf import settings
 from django.db.models import Sum, Avg, Count
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -23,10 +24,17 @@ from .serializers import (
 )
 
 
+# Allow anonymous access in DEBUG mode for development
+def get_permission_classes():
+    if settings.DEBUG:
+        return [AllowAny]
+    return [IsAuthenticated]
+
+
 class DashboardViewSet(viewsets.ModelViewSet):
     """ViewSet for Dashboards"""
     queryset = Dashboard.objects.prefetch_related('charts').all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'title']
@@ -49,7 +57,7 @@ class DashboardViewSet(viewsets.ModelViewSet):
 class ChartViewSet(viewsets.ModelViewSet):
     """ViewSet for Charts"""
     queryset = Chart.objects.select_related('dashboard').all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['dashboard', 'type']
     search_fields = ['title']
@@ -65,7 +73,7 @@ class ChartViewSet(viewsets.ModelViewSet):
 class AnalyticsSalesViewSet(viewsets.ModelViewSet):
     """ViewSet for Sales Analytics"""
     queryset = AnalyticsSales.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['year', 'month']
     ordering_fields = ['year', 'month']
@@ -113,7 +121,7 @@ class AnalyticsSalesViewSet(viewsets.ModelViewSet):
 class KPIMetricViewSet(viewsets.ModelViewSet):
     """ViewSet for KPI Metrics"""
     queryset = KPIMetric.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'period']
     search_fields = ['name', 'description']
@@ -165,7 +173,7 @@ class ReportScheduleViewSet(viewsets.ModelViewSet):
     """ViewSet for Report Schedules"""
     queryset = ReportSchedule.objects.all()
     serializer_class = ReportScheduleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['report_type', 'frequency', 'is_active']
     search_fields = ['name']
@@ -177,7 +185,7 @@ class AnalyticsDashboardView(APIView):
     Get analytics dashboard overview
     GET /api/v1/analytics/overview/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = get_permission_classes()
     
     def get(self, request):
         from django.utils import timezone

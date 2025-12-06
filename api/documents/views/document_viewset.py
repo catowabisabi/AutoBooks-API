@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from documents.models.document import Document
 from documents.serializers.document_serializer import DocumentUploadSerializer
 from documents.services.ocr_service import perform_ocr
@@ -13,9 +14,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentUploadSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
-        return Document.objects.filter(tenant=self.request.user.tenant)
+        return Document.objects.all().order_by('-uploaded_at')
 
     def perform_create(self, serializer):
         serializer.save()
