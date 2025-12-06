@@ -499,8 +499,8 @@ class IPOTimelineProgressListSerializer(serializers.ModelSerializer):
     class Meta:
         model = IPOTimelineProgress
         fields = [
-            'id', 'company_name', 'phase', 'progress_percentage',
-            'target_date', 'status'
+            'id', 'company', 'company_name', 'phase', 'progress_percentage',
+            'target_date', 'status', 'is_active', 'created_at', 'updated_at'
         ]
 
 
@@ -525,8 +525,9 @@ class IPODealFunnelListSerializer(serializers.ModelSerializer):
     class Meta:
         model = IPODealFunnel
         fields = [
-            'id', 'company_name', 'period_date', 'stage',
-            'deal_count', 'conversion_rate'
+            'id', 'company', 'company_name', 'period_date', 'stage',
+            'deal_count', 'conversion_rate', 'total_value', 'notes',
+            'is_active', 'created_at', 'updated_at'
         ]
 
 
@@ -551,8 +552,9 @@ class IPODealSizeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = IPODealSize
         fields = [
-            'id', 'company_name', 'period_date', 'size_category',
-            'deal_count', 'total_amount'
+            'id', 'company', 'company_name', 'period_date', 'size_category',
+            'deal_count', 'total_amount', 'avg_deal_size', 'notes',
+            'is_active', 'created_at', 'updated_at'
         ]
 
 
@@ -583,6 +585,7 @@ class BusinessPartnerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessPartner
         fields = [
-            'id', 'company_name', 'name', 'partner_type',
-            'status', 'contract_value', 'rating'
+            'id', 'company', 'company_name', 'name', 'partner_type',
+            'status', 'contact_person', 'contact_email', 'service_description',
+            'contract_value', 'rating', 'is_active', 'created_at', 'updated_at'
         ]
