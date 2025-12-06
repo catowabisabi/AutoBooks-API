@@ -983,6 +983,14 @@ class MediaSentimentRecord(BaseModel):
     媒體情緒記錄
     Media sentiment tracking over time
     """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='sentiment_records',
+        null=True,
+        blank=True,
+        help_text='Company this sentiment record belongs to'
+    )
     period_date = models.DateField()
     positive_count = models.IntegerField(default=0)
     neutral_count = models.IntegerField(default=0)
@@ -1006,11 +1014,21 @@ class MediaSentimentRecord(BaseModel):
         return f"Sentiment {self.period_date}"
 
 
+
+
 class RevenueTrend(BaseModel):
     """
     收入趨勢
     Monthly revenue trends
     """
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='revenue_trends',
+        null=True,
+        blank=True,
+        help_text='Company this revenue trend belongs to'
+    )
     period_year = models.IntegerField()
     period_month = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(12)]
@@ -1038,8 +1056,230 @@ class RevenueTrend(BaseModel):
         ordering = ['-period_year', '-period_month']
         verbose_name = 'Revenue Trend'
         verbose_name_plural = 'Revenue Trends'
-        unique_together = ['period_year', 'period_month']
+        unique_together = ['company', 'period_year', 'period_month']
     
     def __str__(self):
         return f"Revenue {self.period_year}/{self.period_month}"
+
+
+# =================================================================
+# IPO Project Management Models
+# =================================================================
+
+class IPOTimelineProgress(BaseModel):
+    """
+    IPO 項目時間線進度
+    Track IPO project milestone progress (for the radial bar chart)
+    """
+    PHASE_CHOICES = [
+        ('DUE_DILIGENCE', 'Due Diligence'),
+        ('DOCUMENTATION', 'Documentation'),
+        ('REGULATORY', 'Regulatory Filing'),
+        ('MARKETING', 'Marketing/Roadshow'),
+    ]
+    
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='ipo_timeline_progress'
+    )
+    ipo_mandate = models.ForeignKey(
+        'IPOMandate',
+        on_delete=models.CASCADE,
+        related_name='timeline_progress',
+        null=True,
+        blank=True
+    )
+    phase = models.CharField(
+        max_length=30,
+        choices=PHASE_CHOICES,
+        default='DUE_DILIGENCE'
+    )
+    progress_percentage = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    start_date = models.DateField(null=True, blank=True)
+    target_date = models.DateField(null=True, blank=True)
+    completion_date = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        default='IN_PROGRESS',
+        help_text='NOT_STARTED, IN_PROGRESS, COMPLETED, DELAYED'
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['company', 'phase']
+        verbose_name = 'IPO Timeline Progress'
+        verbose_name_plural = 'IPO Timeline Progress Records'
+        unique_together = ['company', 'ipo_mandate', 'phase']
+    
+    def __str__(self):
+        return f"{self.company.name} - {self.phase}: {self.progress_percentage}%"
+
+
+class IPODealFunnel(BaseModel):
+    """
+    IPO 交易漏斗
+    Track deal pipeline stages (for the deal funnel chart)
+    """
+    STAGE_CHOICES = [
+        ('LEADS', 'Leads'),
+        ('QUALIFIED', 'Qualified'),
+        ('PROPOSAL', 'Proposal'),
+        ('DUE_DILIGENCE', 'Due Diligence'),
+        ('FILING', 'Filing'),
+        ('LISTED', 'Listed'),
+    ]
+    
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='ipo_deal_funnel'
+    )
+    period_date = models.DateField()
+    stage = models.CharField(
+        max_length=30,
+        choices=STAGE_CHOICES,
+        default='LEADS'
+    )
+    deal_count = models.IntegerField(default=0)
+    conversion_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Conversion rate to this stage (%)'
+    )
+    total_value = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-period_date', 'stage']
+        verbose_name = 'IPO Deal Funnel'
+        verbose_name_plural = 'IPO Deal Funnel Records'
+    
+    def __str__(self):
+        return f"{self.stage}: {self.deal_count} deals"
+
+
+class IPODealSize(BaseModel):
+    """
+    IPO 交易規模分佈
+    Track deal size distribution (for the deal size pie chart)
+    """
+    SIZE_CATEGORY_CHOICES = [
+        ('MEGA', 'Mega (>$1B)'),
+        ('LARGE', 'Large ($500M-1B)'),
+        ('MID', 'Mid ($100-500M)'),
+        ('SMALL', 'Small (<$100M)'),
+    ]
+    
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='ipo_deal_sizes'
+    )
+    period_date = models.DateField()
+    size_category = models.CharField(
+        max_length=20,
+        choices=SIZE_CATEGORY_CHOICES,
+        default='MID'
+    )
+    deal_count = models.IntegerField(default=0)
+    total_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Total deal amount in millions'
+    )
+    avg_deal_size = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-period_date', 'size_category']
+        verbose_name = 'IPO Deal Size'
+        verbose_name_plural = 'IPO Deal Size Records'
+    
+    def __str__(self):
+        return f"{self.size_category}: {self.deal_count} deals (${self.total_amount}M)"
+
+
+# =================================================================
+# Partner/Collaboration Models (Updated Active Engagement)
+# =================================================================
+
+class BusinessPartner(BaseModel):
+    """
+    合作夥伴/KOL/服務商
+    Track business partners, KOLs, and service providers
+    """
+    PARTNER_TYPES = [
+        ('KOL', 'KOL/Influencer'),
+        ('MEDIA', 'Media Partner'),
+        ('AGENCY', 'Agency'),
+        ('VENDOR', 'Vendor/Supplier'),
+        ('CONSULTANT', 'Consultant'),
+        ('LEGAL', 'Legal Firm'),
+        ('FINANCIAL', 'Financial Advisor'),
+        ('OTHER', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('INACTIVE', 'Inactive'),
+        ('PROSPECT', 'Prospect'),
+        ('TERMINATED', 'Terminated'),
+    ]
+    
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='business_partners'
+    )
+    name = models.CharField(max_length=255)
+    partner_type = models.CharField(
+        max_length=20,
+        choices=PARTNER_TYPES,
+        default='OTHER'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='ACTIVE'
+    )
+    contact_person = models.CharField(max_length=255, blank=True)
+    contact_email = models.EmailField(blank=True)
+    contact_phone = models.CharField(max_length=50, blank=True)
+    service_description = models.TextField(blank=True)
+    contract_start_date = models.DateField(null=True, blank=True)
+    contract_end_date = models.DateField(null=True, blank=True)
+    contract_value = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    rating = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        help_text='Partner rating 0-5 stars'
+    )
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Business Partner'
+        verbose_name_plural = 'Business Partners'
+    
+    def __str__(self):
+        return f"{self.name} ({self.partner_type})"
+
 

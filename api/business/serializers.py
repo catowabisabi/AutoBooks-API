@@ -7,7 +7,11 @@ Serializers for Companies, Audits, Tax Returns, Billable Hours, Revenue, and BMI
 from rest_framework import serializers
 from .models import (
     Company, AuditProject, TaxReturnCase, BillableHour, 
-    Revenue, BMIIPOPRRecord, BMIDocument
+    Revenue, BMIIPOPRRecord, BMIDocument,
+    ListedClient, Announcement, MediaCoverage, IPOMandate,
+    ServiceRevenue, ActiveEngagement, ClientPerformance,
+    ClientIndustry, MediaSentimentRecord, RevenueTrend,
+    IPOTimelineProgress, IPODealFunnel, IPODealSize, BusinessPartner
 )
 from users.serializers import UserSerializer
 
@@ -466,3 +470,119 @@ class RevenueTrendSerializer(serializers.ModelSerializer):
             'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+# =================================================================
+# IPO Project Management Serializers
+# =================================================================
+
+class IPOTimelineProgressSerializer(serializers.ModelSerializer):
+    """Serializer for IPO Timeline Progress"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    ipo_mandate_name = serializers.CharField(source='ipo_mandate.project_name', read_only=True)
+    
+    class Meta:
+        model = IPOTimelineProgress
+        fields = [
+            'id', 'company', 'company_name', 'ipo_mandate', 'ipo_mandate_name',
+            'phase', 'progress_percentage', 'start_date', 'target_date',
+            'completion_date', 'status', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class IPOTimelineProgressListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = IPOTimelineProgress
+        fields = [
+            'id', 'company_name', 'phase', 'progress_percentage',
+            'target_date', 'status'
+        ]
+
+
+class IPODealFunnelSerializer(serializers.ModelSerializer):
+    """Serializer for IPO Deal Funnel"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = IPODealFunnel
+        fields = [
+            'id', 'company', 'company_name', 'period_date', 'stage',
+            'deal_count', 'conversion_rate', 'total_value', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class IPODealFunnelListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = IPODealFunnel
+        fields = [
+            'id', 'company_name', 'period_date', 'stage',
+            'deal_count', 'conversion_rate'
+        ]
+
+
+class IPODealSizeSerializer(serializers.ModelSerializer):
+    """Serializer for IPO Deal Size"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = IPODealSize
+        fields = [
+            'id', 'company', 'company_name', 'period_date', 'size_category',
+            'deal_count', 'total_amount', 'avg_deal_size', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class IPODealSizeListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = IPODealSize
+        fields = [
+            'id', 'company_name', 'period_date', 'size_category',
+            'deal_count', 'total_amount'
+        ]
+
+
+# =================================================================
+# Business Partner Serializers
+# =================================================================
+
+class BusinessPartnerSerializer(serializers.ModelSerializer):
+    """Serializer for Business Partner"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = BusinessPartner
+        fields = [
+            'id', 'company', 'company_name', 'name', 'partner_type',
+            'status', 'contact_person', 'contact_email', 'contact_phone',
+            'service_description', 'contract_start_date', 'contract_end_date',
+            'contract_value', 'rating', 'notes',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class BusinessPartnerListSerializer(serializers.ModelSerializer):
+    """Light serializer for list views"""
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    
+    class Meta:
+        model = BusinessPartner
+        fields = [
+            'id', 'company_name', 'name', 'partner_type',
+            'status', 'contract_value', 'rating'
+        ]

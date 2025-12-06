@@ -16,7 +16,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import (
     Company, AuditProject, TaxReturnCase, BillableHour, 
-    Revenue, BMIIPOPRRecord, BMIDocument
+    Revenue, BMIIPOPRRecord, BMIDocument,
+    ListedClient, Announcement, MediaCoverage, IPOMandate,
+    ServiceRevenue, ActiveEngagement, ClientPerformance,
+    ClientIndustry, MediaSentimentRecord, RevenueTrend,
+    IPOTimelineProgress, IPODealFunnel, IPODealSize, BusinessPartner
 )
 from .serializers import (
     CompanySerializer, CompanyListSerializer,
@@ -25,7 +29,11 @@ from .serializers import (
     BillableHourSerializer, BillableHourListSerializer,
     RevenueSerializer, RevenueListSerializer,
     BMIIPOPRRecordSerializer, BMIIPOPRRecordListSerializer,
-    BMIDocumentSerializer, OverviewStatsSerializer
+    BMIDocumentSerializer, OverviewStatsSerializer,
+    IPOTimelineProgressSerializer, IPOTimelineProgressListSerializer,
+    IPODealFunnelSerializer, IPODealFunnelListSerializer,
+    IPODealSizeSerializer, IPODealSizeListSerializer,
+    BusinessPartnerSerializer, BusinessPartnerListSerializer
 )
 
 
@@ -644,3 +652,208 @@ class RevenueTrendViewSet(viewsets.ModelViewSet):
                 churned=Sum('churned_clients')
             ).order_by('-period_year')
         ))
+
+
+# =================================================================
+# IPO Timeline Progress ViewSet
+# =================================================================
+
+class IPOTimelineProgressViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for IPO Timeline Progress CRUD operations
+    
+    Tracks completion percentage of each IPO phase:
+    - Due Diligence
+    - Documentation  
+    - Regulatory Filing
+    - Marketing
+    - Pricing
+    """
+    queryset = IPOTimelineProgress.objects.all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['company', 'phase', 'status']
+    search_fields = ['company__name', 'phase']
+    ordering_fields = ['phase', 'progress_percentage', 'target_date', 'created_at']
+    ordering = ['phase']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return IPOTimelineProgressListSerializer
+        return IPOTimelineProgressSerializer
+    
+    @action(detail=False, methods=['get'])
+    def by_company(self, request):
+        """Get IPO timeline progress grouped by company"""
+        company_id = request.query_params.get('company_id')
+        if company_id:
+            qs = self.get_queryset().filter(company_id=company_id)
+        else:
+            qs = self.get_queryset()
+        return Response(IPOTimelineProgressSerializer(qs, many=True).data)
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get summary of all phases with average completion"""
+        from django.db.models import Avg
+        qs = self.get_queryset().values('phase').annotate(
+            avg_progress=Avg('progress_percentage'),
+            total_count=Count('id')
+        ).order_by('phase')
+        return Response(list(qs))
+
+
+# =================================================================
+# IPO Deal Funnel ViewSet
+# =================================================================
+
+class IPODealFunnelViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for IPO Deal Funnel CRUD operations
+    
+    Tracks deal conversion through stages:
+    - Leads
+    - Qualified
+    - Proposal
+    - Negotiation
+    - Closed Won
+    """
+    queryset = IPODealFunnel.objects.all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['company', 'stage', 'period_date']
+    search_fields = ['company__name', 'stage']
+    ordering_fields = ['stage', 'deal_count', 'conversion_rate', 'period_date']
+    ordering = ['-period_date', 'stage']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return IPODealFunnelListSerializer
+        return IPODealFunnelSerializer
+    
+    @action(detail=False, methods=['get'])
+    def current_funnel(self, request):
+        """Get current month's funnel data"""
+        from django.utils import timezone
+        current_date = timezone.now().date()
+        qs = self.get_queryset().filter(
+            period_date__year=current_date.year,
+            period_date__month=current_date.month
+        )
+        return Response(IPODealFunnelSerializer(qs, many=True).data)
+    
+    @action(detail=False, methods=['get'])
+    def conversion_rates(self, request):
+        """Get conversion rates by stage"""
+        from django.db.models import Avg
+        qs = self.get_queryset().values('stage').annotate(
+            avg_conversion=Avg('conversion_rate'),
+            total_deals=Sum('deal_count')
+        ).order_by('stage')
+        return Response(list(qs))
+
+
+# =================================================================
+# IPO Deal Size ViewSet
+# =================================================================
+
+class IPODealSizeViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for IPO Deal Size CRUD operations
+    
+    Tracks deal distribution by size:
+    - Mega (>$1B)
+    - Large ($500M-1B)
+    - Mid ($100M-500M)
+    - Small (<$100M)
+    """
+    queryset = IPODealSize.objects.all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['company', 'size_category', 'period_date']
+    search_fields = ['company__name', 'size_category']
+    ordering_fields = ['size_category', 'deal_count', 'total_amount', 'period_date']
+    ordering = ['-period_date', 'size_category']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return IPODealSizeListSerializer
+        return IPODealSizeSerializer
+    
+    @action(detail=False, methods=['get'])
+    def distribution(self, request):
+        """Get current deal size distribution"""
+        qs = self.get_queryset().values('size_category').annotate(
+            total_deals=Sum('deal_count'),
+            total_value=Sum('total_amount')
+        ).order_by('size_category')
+        return Response(list(qs))
+    
+    @action(detail=False, methods=['get'])
+    def trend(self, request):
+        """Get deal size distribution trend over time"""
+        months = int(request.query_params.get('months', 6))
+        from django.utils import timezone
+        from dateutil.relativedelta import relativedelta
+        end_date = timezone.now().date()
+        start_date = end_date - relativedelta(months=months)
+        qs = self.get_queryset().filter(
+            period_date__gte=start_date,
+            period_date__lte=end_date
+        ).order_by('period_date', 'size_category')
+        return Response(IPODealSizeSerializer(qs, many=True).data)
+
+
+# =================================================================
+# Business Partner ViewSet
+# =================================================================
+
+class BusinessPartnerViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Business Partner CRUD operations
+    
+    Manages all partner types:
+    - KOL (Key Opinion Leaders)
+    - Provider (Service Providers)
+    - Vendor (Suppliers)
+    - Media (Media Partners)
+    - Consultant (External Consultants)
+    """
+    queryset = BusinessPartner.objects.all()
+    permission_classes = get_permission_classes()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['company', 'partner_type', 'status']
+    search_fields = ['name', 'contact_person', 'contact_email', 'service_description']
+    ordering_fields = ['name', 'partner_type', 'status', 'contract_value', 'rating', 'created_at']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return BusinessPartnerListSerializer
+        return BusinessPartnerSerializer
+    
+    @action(detail=False, methods=['get'])
+    def by_type(self, request):
+        """Get partners grouped by type"""
+        partner_type = request.query_params.get('type')
+        if partner_type:
+            qs = self.get_queryset().filter(partner_type=partner_type)
+        else:
+            qs = self.get_queryset()
+        return Response(BusinessPartnerSerializer(qs, many=True).data)
+    
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        """Get all active partners"""
+        qs = self.get_queryset().filter(status='active', is_active=True)
+        return Response(BusinessPartnerSerializer(qs, many=True).data)
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get partner summary by type"""
+        qs = self.get_queryset().filter(is_active=True).values('partner_type').annotate(
+            total_count=Count('id'),
+            active_count=Count('id', filter=Q(status='active')),
+            total_value=Sum('contract_value')
+        ).order_by('partner_type')
+        return Response(list(qs))

@@ -24,6 +24,11 @@ from .views import (
     ClientIndustryViewSet,
     MediaSentimentRecordViewSet,
     RevenueTrendViewSet,
+    # IPO and Partner ViewSets
+    IPOTimelineProgressViewSet,
+    IPODealFunnelViewSet,
+    IPODealSizeViewSet,
+    BusinessPartnerViewSet,
 )
 
 router = DefaultRouter()
@@ -46,6 +51,12 @@ router.register(r'client-performance', ClientPerformanceViewSet, basename='clien
 router.register(r'client-industries', ClientIndustryViewSet, basename='client-industry')
 router.register(r'media-sentiment', MediaSentimentRecordViewSet, basename='media-sentiment')
 router.register(r'revenue-trends', RevenueTrendViewSet, basename='revenue-trend')
+
+# IPO and Partner endpoints
+router.register(r'ipo-timeline-progress', IPOTimelineProgressViewSet, basename='ipo-timeline-progress')
+router.register(r'ipo-deal-funnel', IPODealFunnelViewSet, basename='ipo-deal-funnel')
+router.register(r'ipo-deal-size', IPODealSizeViewSet, basename='ipo-deal-size')
+router.register(r'partners', BusinessPartnerViewSet, basename='partner')
 
 urlpatterns = [
     path('', include(router.urls)),
