@@ -18,6 +18,7 @@ from ai_assistants.serializers.email_serializer import (
     EmailAttachmentSerializer, EmailTemplateSerializer,
     EmailAIAnalyzeSerializer, EmailAIReplySerializer
 )
+from ai_assistants.services.email_service import summarize_email, generate_ai_reply
 
 logger = logging.getLogger(__name__)
 
@@ -143,17 +144,25 @@ class EmailViewSet(viewsets.ModelViewSet):
         AI analyze email - generate summary, extract action items
         """
         email = self.get_object()
-        
-        # TODO: Integrate with AI service
-        # For now, return mock data
-        email.ai_summary = f"Summary of email: {email.subject[:50]}..."
-        email.ai_action_items = [
-            {"action": "Follow up", "deadline": "Next week"},
-            {"action": "Review documents", "deadline": "2 days"}
-        ]
-        email.ai_sentiment = "neutral"
-        email.save()
-        
+        payload = request.data.copy()
+        payload['email_id'] = str(email.id)
+
+        serializer = EmailAIAnalyzeSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            analysis = summarize_email(email)
+            email.ai_summary = analysis.get('summary')
+            email.ai_action_items = analysis.get('action_items', [])
+            email.ai_sentiment = analysis.get('sentiment')
+            email.save(update_fields=['ai_summary', 'ai_action_items', 'ai_sentiment'])
+        except Exception as exc:
+            logger.error("Email analyze failed: %s", exc, exc_info=True)
+            return Response(
+                {"error": "Failed to analyze email"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
         return Response({
             'summary': email.ai_summary,
             'action_items': email.ai_action_items,
@@ -166,30 +175,26 @@ class EmailViewSet(viewsets.ModelViewSet):
         AI generate reply for email
         """
         email = self.get_object()
-        serializer = EmailAIReplySerializer(data=request.data)
+        payload = request.data.copy()
+        payload['email_id'] = str(email.id)
+
+        serializer = EmailAIReplySerializer(data=payload)
         serializer.is_valid(raise_exception=True)
-        
         tone = serializer.validated_data.get('tone', 'professional')
-        
-        # TODO: Integrate with AI service
-        # For now, return mock reply
-        suggested_reply = f"""
-Dear {email.from_name or 'Sir/Madam'},
+        key_points = serializer.validated_data.get('key_points') or []
 
-Thank you for your email regarding "{email.subject}".
+        try:
+            result = generate_ai_reply(email, tone, key_points)
+            email.ai_suggested_reply = result.get('suggested_reply')
+            email.save(update_fields=['ai_suggested_reply'])
+        except Exception as exc:
+            logger.error("Email reply generation failed: %s", exc, exc_info=True)
+            return Response(
+                {"error": "Failed to generate reply"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-I acknowledge receipt of your message and will respond in detail shortly.
-
-Best regards
-        """.strip()
-        
-        email.ai_suggested_reply = suggested_reply
-        email.save()
-        
-        return Response({
-            'suggested_reply': suggested_reply,
-            'tone': tone
-        })
+        return Response(result)
     
     @action(detail=False, methods=['post'])
     def compose(self, request):

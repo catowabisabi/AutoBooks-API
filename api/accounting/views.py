@@ -7,6 +7,15 @@ from django.db.models import Sum, Q
 from decimal import Decimal
 import io
 
+# PDF Generation imports
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import mm, cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 from .models import (
     FiscalYear, AccountingPeriod, Currency, TaxRate, Account,
     JournalEntry, JournalEntryLine, Contact, Invoice, InvoiceLine,
@@ -220,9 +229,165 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         """Generate PDF for invoice"""
         invoice = self.get_object()
         
-        # TODO: Implement PDF generation with reportlab or weasyprint
-        # For now, return a simple response
-        return Response({'message': 'PDF generation not yet implemented'})
+        # Create the HttpResponse object with PDF headers
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+        
+        # Create PDF buffer
+        buffer = io.BytesIO()
+        
+        # Create the PDF document
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=2*cm,
+            leftMargin=2*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'Title',
+            parent=styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+            alignment=1  # Center
+        )
+        heading_style = ParagraphStyle(
+            'Heading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceAfter=12
+        )
+        normal_style = styles['Normal']
+        
+        # Build the PDF content
+        elements = []
+        
+        # Header - Invoice Title
+        invoice_type_label = "SALES INVOICE" if invoice.invoice_type == 'SALES' else "PURCHASE INVOICE"
+        elements.append(Paragraph(invoice_type_label, title_style))
+        elements.append(Spacer(1, 10))
+        
+        # Invoice Info Table
+        invoice_info = [
+            ['Invoice Number:', invoice.invoice_number, 'Date:', str(invoice.issue_date)],
+            ['Reference:', invoice.reference or '-', 'Due Date:', str(invoice.due_date)],
+            ['Status:', invoice.status, 'Currency:', invoice.currency.code if invoice.currency else 'TWD'],
+        ]
+        
+        info_table = Table(invoice_info, colWidths=[3*cm, 5*cm, 3*cm, 5*cm])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 20))
+        
+        # Contact Info
+        contact = invoice.contact
+        elements.append(Paragraph("Bill To:", heading_style))
+        contact_info = f"""
+        {contact.name}<br/>
+        {contact.company_name or ''}<br/>
+        {contact.address or ''}<br/>
+        {contact.email or ''}
+        """
+        elements.append(Paragraph(contact_info.strip(), normal_style))
+        elements.append(Spacer(1, 20))
+        
+        # Invoice Lines Table
+        elements.append(Paragraph("Invoice Items:", heading_style))
+        
+        # Table header
+        line_data = [['Description', 'Qty', 'Unit Price', 'Tax', 'Total']]
+        
+        # Add invoice lines
+        for line in invoice.lines.all():
+            line_data.append([
+                line.description,
+                str(line.quantity),
+                f"${line.unit_price:,.2f}",
+                f"${line.tax_amount:,.2f}",
+                f"${line.line_total:,.2f}",
+            ])
+        
+        # Create line items table
+        line_table = Table(line_data, colWidths=[8*cm, 2*cm, 3*cm, 2*cm, 3*cm])
+        line_table.setStyle(TableStyle([
+            # Header styling
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4A5568')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            # Body styling
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+            ('TOPPADDING', (0, 1), (-1, -1), 8),
+            # Alignment
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            # Grid
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            # Alternating row colors
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F7FAFC')]),
+        ]))
+        elements.append(line_table)
+        elements.append(Spacer(1, 20))
+        
+        # Totals
+        totals_data = [
+            ['Subtotal:', f"${invoice.subtotal:,.2f}"],
+            ['Tax:', f"${invoice.tax_amount:,.2f}"],
+            ['Discount:', f"-${invoice.discount_amount:,.2f}"],
+            ['Total:', f"${invoice.total:,.2f}"],
+            ['Amount Paid:', f"${invoice.amount_paid:,.2f}"],
+            ['Balance Due:', f"${invoice.amount_due:,.2f}"],
+        ]
+        
+        totals_table = Table(totals_data, colWidths=[12*cm, 4*cm])
+        totals_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -1), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(totals_table)
+        elements.append(Spacer(1, 30))
+        
+        # Notes
+        if invoice.notes:
+            elements.append(Paragraph("Notes:", heading_style))
+            elements.append(Paragraph(invoice.notes, normal_style))
+            elements.append(Spacer(1, 10))
+        
+        # Terms
+        if invoice.terms:
+            elements.append(Paragraph("Terms & Conditions:", heading_style))
+            elements.append(Paragraph(invoice.terms, normal_style))
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Get PDF content
+        pdf = buffer.getvalue()
+        buffer.close()
+        response.write(pdf)
+        
+        return response
     
     @action(detail=False, methods=['get'])
     def overdue(self, request):

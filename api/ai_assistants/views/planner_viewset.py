@@ -45,6 +45,10 @@ class StartDatasetLoadView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def post(self, request):
+        """Allow POST for clients that default to POST for actions."""
+        return self.get(request)
+
 
 class PlannerDataView(APIView):
     def get_permissions(self):
