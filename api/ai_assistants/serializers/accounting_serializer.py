@@ -241,11 +241,17 @@ class AccountingProjectDetailSerializer(serializers.ModelSerializer):
 
 class AccountingProjectCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating accounting project / 建立會計專案序列化器"""
+    company = serializers.PrimaryKeyRelatedField(
+        queryset=Company.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    company_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
     
     class Meta:
         model = AccountingProject
         fields = [
-            'code', 'name', 'description', 'company',
+            'code', 'name', 'description', 'company', 'company_name',
             'project_type', 'fiscal_year', 'quarter',
             'start_date', 'end_date', 'deadline',
             'team_members', 'budget_hours', 'notes'
@@ -255,6 +261,30 @@ class AccountingProjectCreateSerializer(serializers.ModelSerializer):
         if AccountingProject.objects.filter(code=value).exists():
             raise serializers.ValidationError("Project code already exists / 專案編號已存在")
         return value
+    
+    def validate(self, attrs):
+        company = attrs.get('company')
+        company_name = attrs.get('company_name', '').strip()
+        
+        # If no company but company_name provided, create or get company
+        if not company and company_name:
+            company, _ = Company.objects.get_or_create(
+                name=company_name,
+                defaults={'contact_person': '', 'contact_email': '', 'contact_phone': ''}
+            )
+            attrs['company'] = company
+        elif not company and not company_name:
+            # Allow creation without company - use project name as company name
+            project_name = attrs.get('name', 'Unnamed Project')
+            company, _ = Company.objects.get_or_create(
+                name=project_name,
+                defaults={'contact_person': '', 'contact_email': '', 'contact_phone': ''}
+            )
+            attrs['company'] = company
+        
+        # Remove company_name from attrs as it's not a model field
+        attrs.pop('company_name', None)
+        return attrs
     
     def create(self, validated_data):
         team_members = validated_data.pop('team_members', [])

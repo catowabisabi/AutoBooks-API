@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from ai_assistants.views.analyst_viewset import (
     AnalystDataView,
+    AnalystDataStatusView,
     AnalystQueryView,
     AnalystSchemaView,
     StartDatasetLoadView as AnalystStartDatasetLoadView,
@@ -88,6 +89,7 @@ urlpatterns = [
     # Analyst Assistant
     path("analyst-assistant/start/", AnalystStartDatasetLoadView.as_view(), name="analyst-assistant-start"),
     path("analyst-assistant/data/", AnalystDataView.as_view(), name="analyst-assistant-data"),
+    path("analyst-assistant/status/", AnalystDataStatusView.as_view(), name="analyst-assistant-status"),
     path("analyst-assistant/query/", AnalystQueryView.as_view(), name="analyst-assistant-query"),
     path("analyst-assistant/schema/", AnalystSchemaView.as_view(), name="analyst-assistant-schema"),
     
