@@ -251,6 +251,12 @@ from .models_extended import (
     # Brainstorming Assistant
     BrainstormSession,
     BrainstormIdea,
+    # Brainstorming Meeting
+    MeetingStatus,
+    BrainstormMeeting,
+    MeetingParticipantRole,
+    MeetingParticipantStatus,
+    BrainstormMeetingParticipant,
     # AI Agent System
     AIActionType,
     AIActionStatus,

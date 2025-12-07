@@ -3,7 +3,11 @@
 Brainstorming Assistant Serializers
 """
 from rest_framework import serializers
-from ai_assistants.models import BrainstormSession, BrainstormIdea
+from ai_assistants.models import (
+    BrainstormSession, BrainstormIdea,
+    BrainstormMeeting, BrainstormMeetingParticipant,
+    MeetingStatus, MeetingParticipantRole, MeetingParticipantStatus
+)
 
 
 class BrainstormSessionSerializer(serializers.ModelSerializer):
@@ -164,3 +168,188 @@ class MarketAnalysisSerializer(serializers.Serializer):
         ]
     )
     specific_questions = serializers.ListField(child=serializers.CharField(), required=False)
+
+
+# =================================================================
+# Brainstorming Meeting Serializers
+# =================================================================
+
+class BrainstormMeetingParticipantSerializer(serializers.ModelSerializer):
+    """Full participant serializer"""
+    user_name = serializers.CharField(source='user.full_name', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_avatar = serializers.CharField(source='user.avatar_url', read_only=True)
+    display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = BrainstormMeetingParticipant
+        fields = [
+            'id', 'meeting', 'user', 'user_name', 'user_email', 'user_avatar',
+            'role', 'status', 'responded_at', 'response_notes',
+            'joined_at', 'left_at', 'ideas_contributed', 'votes_cast', 'notes',
+            'is_external', 'external_name', 'external_email', 'external_company',
+            'display_name', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_display_name(self, obj):
+        if obj.is_external:
+            return obj.external_name
+        return obj.user.full_name if obj.user else ''
+
+
+class BrainstormMeetingParticipantCreateSerializer(serializers.ModelSerializer):
+    """Create participant serializer"""
+    class Meta:
+        model = BrainstormMeetingParticipant
+        fields = [
+            'meeting', 'user', 'role', 'status',
+            'is_external', 'external_name', 'external_email', 'external_company'
+        ]
+
+
+class BrainstormMeetingParticipantListSerializer(serializers.ModelSerializer):
+    """Lightweight participant list serializer"""
+    user_name = serializers.CharField(source='user.full_name', read_only=True)
+    display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = BrainstormMeetingParticipant
+        fields = ['id', 'user', 'user_name', 'display_name', 'role', 'status', 'is_external']
+    
+    def get_display_name(self, obj):
+        if obj.is_external:
+            return obj.external_name
+        return obj.user.full_name if obj.user else ''
+
+
+class BrainstormMeetingSerializer(serializers.ModelSerializer):
+    """Full meeting serializer"""
+    organizer_name = serializers.CharField(source='organizer.full_name', read_only=True)
+    organizer_email = serializers.CharField(source='organizer.email', read_only=True)
+    participants_list = serializers.SerializerMethodField()
+    participant_count = serializers.IntegerField(read_only=True)
+    duration_minutes = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = BrainstormMeeting
+        fields = [
+            'id', 'title', 'description', 'status',
+            'scheduled_start', 'scheduled_end', 'actual_start', 'actual_end',
+            'location', 'meeting_link', 'meeting_type',
+            'agenda', 'objectives', 'meeting_notes', 'summary',
+            'action_items', 'decisions_made',
+            'ideas_generated', 'selected_ideas',
+            'organizer', 'organizer_name', 'organizer_email',
+            'max_participants', 'participant_count', 'duration_minutes',
+            'participants_list',
+            'related_session', 'related_project', 'related_campaign', 'related_client',
+            'tags', 'attachments',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'participant_count', 'duration_minutes', 'created_at', 'updated_at']
+    
+    def get_participants_list(self, obj):
+        return BrainstormMeetingParticipantListSerializer(
+            obj.participants.all(), many=True
+        ).data
+
+
+class BrainstormMeetingListSerializer(serializers.ModelSerializer):
+    """Lightweight meeting list serializer"""
+    organizer_name = serializers.CharField(source='organizer.full_name', read_only=True)
+    participant_count = serializers.IntegerField(read_only=True)
+    duration_minutes = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = BrainstormMeeting
+        fields = [
+            'id', 'title', 'status', 'meeting_type',
+            'scheduled_start', 'scheduled_end',
+            'organizer', 'organizer_name',
+            'participant_count', 'duration_minutes',
+            'location', 'tags', 'created_at'
+        ]
+
+
+class BrainstormMeetingCreateSerializer(serializers.ModelSerializer):
+    """Create meeting serializer"""
+    participant_user_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        write_only=True,
+        help_text='List of user UUIDs to invite as participants'
+    )
+    
+    class Meta:
+        model = BrainstormMeeting
+        fields = [
+            'title', 'description', 'status',
+            'scheduled_start', 'scheduled_end',
+            'location', 'meeting_link', 'meeting_type',
+            'agenda', 'objectives', 'max_participants',
+            'related_session', 'related_project', 'related_campaign', 'related_client',
+            'tags', 'participant_user_ids'
+        ]
+    
+    def create(self, validated_data):
+        participant_user_ids = validated_data.pop('participant_user_ids', [])
+        meeting = super().create(validated_data)
+        
+        # Add participants
+        from users.models import User
+        for user_id in participant_user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                BrainstormMeetingParticipant.objects.create(
+                    meeting=meeting,
+                    user=user,
+                    role=MeetingParticipantRole.PARTICIPANT,
+                    status=MeetingParticipantStatus.INVITED
+                )
+            except User.DoesNotExist:
+                pass
+        
+        return meeting
+
+
+class BrainstormMeetingUpdateSerializer(serializers.ModelSerializer):
+    """Update meeting serializer"""
+    class Meta:
+        model = BrainstormMeeting
+        fields = [
+            'title', 'description', 'status',
+            'scheduled_start', 'scheduled_end', 'actual_start', 'actual_end',
+            'location', 'meeting_link', 'meeting_type',
+            'agenda', 'objectives', 'meeting_notes', 'summary',
+            'action_items', 'decisions_made',
+            'ideas_generated', 'selected_ideas',
+            'max_participants', 'tags', 'attachments'
+        ]
+
+
+class AddParticipantSerializer(serializers.Serializer):
+    """Add participant to meeting"""
+    user_id = serializers.UUIDField(required=False)
+    role = serializers.ChoiceField(
+        choices=MeetingParticipantRole.choices,
+        default=MeetingParticipantRole.PARTICIPANT
+    )
+    # For external participants
+    is_external = serializers.BooleanField(default=False)
+    external_name = serializers.CharField(required=False, allow_blank=True)
+    external_email = serializers.EmailField(required=False, allow_blank=True)
+    external_company = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        if not data.get('is_external') and not data.get('user_id'):
+            raise serializers.ValidationError("user_id is required for internal participants")
+        if data.get('is_external') and not data.get('external_name'):
+            raise serializers.ValidationError("external_name is required for external participants")
+        return data
+
+
+class UpdateParticipantStatusSerializer(serializers.Serializer):
+    """Update participant status (RSVP)"""
+    status = serializers.ChoiceField(choices=MeetingParticipantStatus.choices)
+    response_notes = serializers.CharField(required=False, allow_blank=True)

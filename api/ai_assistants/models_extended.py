@@ -597,6 +597,226 @@ class BrainstormIdea(BaseModel):
         ordering = ['-rating', '-created_at']
 
 
+class MeetingStatus(models.TextChoices):
+    """Meeting status / 會議狀態"""
+    SCHEDULED = 'SCHEDULED', 'Scheduled / 已排程'
+    IN_PROGRESS = 'IN_PROGRESS', 'In Progress / 進行中'
+    COMPLETED = 'COMPLETED', 'Completed / 已完成'
+    CANCELLED = 'CANCELLED', 'Cancelled / 已取消'
+    POSTPONED = 'POSTPONED', 'Postponed / 已延期'
+
+
+class BrainstormMeeting(BaseModel):
+    """
+    Brainstorming Meeting model - stores meeting content and participants
+    腦力激盪會議模型 - 存儲會議內容和參與者
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Meeting basic info / 會議基本信息
+    title = models.CharField(max_length=500, help_text='Meeting title / 會議標題')
+    description = models.TextField(blank=True, help_text='Meeting description / 會議描述')
+    
+    # Meeting status / 會議狀態
+    status = models.CharField(
+        max_length=20,
+        choices=MeetingStatus.choices,
+        default=MeetingStatus.SCHEDULED
+    )
+    
+    # Meeting schedule / 會議時間
+    scheduled_start = models.DateTimeField(help_text='Scheduled start time / 預定開始時間')
+    scheduled_end = models.DateTimeField(help_text='Scheduled end time / 預定結束時間')
+    actual_start = models.DateTimeField(null=True, blank=True, help_text='Actual start time / 實際開始時間')
+    actual_end = models.DateTimeField(null=True, blank=True, help_text='Actual end time / 實際結束時間')
+    
+    # Meeting location / 會議地點
+    location = models.CharField(max_length=500, blank=True, help_text='Meeting location / 會議地點')
+    meeting_link = models.URLField(blank=True, help_text='Online meeting link / 線上會議連結')
+    meeting_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('IN_PERSON', 'In Person / 實體'),
+            ('ONLINE', 'Online / 線上'),
+            ('HYBRID', 'Hybrid / 混合'),
+        ],
+        default='IN_PERSON'
+    )
+    
+    # Meeting content / 會議內容
+    agenda = models.TextField(blank=True, help_text='Meeting agenda / 會議議程')
+    objectives = models.JSONField(default=list, help_text='Meeting objectives / 會議目標')
+    meeting_notes = models.TextField(blank=True, help_text='Meeting notes / 會議記錄')
+    summary = models.TextField(blank=True, help_text='Meeting summary / 會議總結')
+    
+    # Action items from meeting / 會議行動項目
+    action_items = models.JSONField(default=list, help_text='Action items [{task, assignee, deadline}]')
+    decisions_made = models.JSONField(default=list, help_text='Decisions made during meeting / 會議決定')
+    
+    # Brainstorming results / 腦力激盪結果
+    ideas_generated = models.JSONField(default=list, help_text='Ideas generated during brainstorming / 腦力激盪產生的想法')
+    selected_ideas = models.JSONField(default=list, help_text='Selected/voted ideas / 選中/投票的想法')
+    
+    # Organizer / 組織者
+    organizer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='organized_brainstorm_meetings',
+        help_text='Meeting organizer / 會議組織者'
+    )
+    
+    # Participants info / 參與者信息
+    max_participants = models.IntegerField(default=20, help_text='Maximum number of participants / 最大參與人數')
+    
+    # Related session (optional) / 相關會議 (可選)
+    related_session = models.ForeignKey(
+        BrainstormSession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='meetings'
+    )
+    
+    # Related entities / 相關實體
+    related_project = models.ForeignKey(
+        'business.AuditProject',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='brainstorm_meetings'
+    )
+    related_campaign = models.ForeignKey(
+        'business.BMIIPOPRRecord',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='brainstorm_meetings'
+    )
+    related_client = models.ForeignKey(
+        'business.Company',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='brainstorm_meetings'
+    )
+    
+    # Tags / 標籤
+    tags = models.JSONField(default=list, help_text='Meeting tags / 會議標籤')
+    
+    # Attachments / 附件
+    attachments = models.JSONField(default=list, help_text='Meeting attachments [{name, url, type}]')
+    
+    class Meta:
+        ordering = ['-scheduled_start']
+        verbose_name = 'Brainstorm Meeting / 腦力激盪會議'
+        verbose_name_plural = 'Brainstorm Meetings / 腦力激盪會議'
+    
+    def __str__(self):
+        return f"{self.title} ({self.status})"
+    
+    @property
+    def participant_count(self):
+        """Return the number of participants / 返回參與者人數"""
+        return self.participants.count()
+    
+    @property
+    def duration_minutes(self):
+        """Return the scheduled duration in minutes / 返回預定時長(分鐘)"""
+        if self.scheduled_start and self.scheduled_end:
+            delta = self.scheduled_end - self.scheduled_start
+            return int(delta.total_seconds() / 60)
+        return 0
+
+
+class MeetingParticipantRole(models.TextChoices):
+    """Meeting participant role / 會議參與者角色"""
+    ORGANIZER = 'ORGANIZER', 'Organizer / 組織者'
+    FACILITATOR = 'FACILITATOR', 'Facilitator / 主持人'
+    PRESENTER = 'PRESENTER', 'Presenter / 報告者'
+    PARTICIPANT = 'PARTICIPANT', 'Participant / 參與者'
+    OBSERVER = 'OBSERVER', 'Observer / 旁聽者'
+    NOTETAKER = 'NOTETAKER', 'Note Taker / 記錄者'
+
+
+class MeetingParticipantStatus(models.TextChoices):
+    """Meeting participant status / 會議參與者狀態"""
+    INVITED = 'INVITED', 'Invited / 已邀請'
+    ACCEPTED = 'ACCEPTED', 'Accepted / 已接受'
+    DECLINED = 'DECLINED', 'Declined / 已拒絕'
+    TENTATIVE = 'TENTATIVE', 'Tentative / 暫定'
+    ATTENDED = 'ATTENDED', 'Attended / 已出席'
+    NO_SHOW = 'NO_SHOW', 'No Show / 未出席'
+
+
+class BrainstormMeetingParticipant(BaseModel):
+    """
+    Meeting participant model - tracks who attended the meeting
+    會議參與者模型 - 追蹤誰參加了會議
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    meeting = models.ForeignKey(
+        BrainstormMeeting,
+        on_delete=models.CASCADE,
+        related_name='participants'
+    )
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='brainstorm_meeting_participations'
+    )
+    
+    # Participant role / 參與者角色
+    role = models.CharField(
+        max_length=20,
+        choices=MeetingParticipantRole.choices,
+        default=MeetingParticipantRole.PARTICIPANT
+    )
+    
+    # Attendance status / 出席狀態
+    status = models.CharField(
+        max_length=20,
+        choices=MeetingParticipantStatus.choices,
+        default=MeetingParticipantStatus.INVITED
+    )
+    
+    # Response / 回覆
+    responded_at = models.DateTimeField(null=True, blank=True, help_text='When participant responded / 參與者回覆時間')
+    response_notes = models.TextField(blank=True, help_text='Response notes / 回覆備註')
+    
+    # Attendance tracking / 出席追蹤
+    joined_at = models.DateTimeField(null=True, blank=True, help_text='When participant joined / 參與者加入時間')
+    left_at = models.DateTimeField(null=True, blank=True, help_text='When participant left / 參與者離開時間')
+    
+    # Contributions / 貢獻
+    ideas_contributed = models.IntegerField(default=0, help_text='Number of ideas contributed / 貢獻的想法數量')
+    votes_cast = models.IntegerField(default=0, help_text='Number of votes cast / 投票數量')
+    notes = models.TextField(blank=True, help_text='Personal notes / 個人備註')
+    
+    # For external/guest participants / 外部/訪客參與者
+    is_external = models.BooleanField(default=False, help_text='Is external participant / 是否為外部參與者')
+    external_name = models.CharField(max_length=255, blank=True, help_text='External participant name / 外部參與者姓名')
+    external_email = models.EmailField(blank=True, help_text='External participant email / 外部參與者電郵')
+    external_company = models.CharField(max_length=255, blank=True, help_text='External participant company / 外部參與者公司')
+    
+    class Meta:
+        ordering = ['role', '-created_at']
+        verbose_name = 'Meeting Participant / 會議參與者'
+        verbose_name_plural = 'Meeting Participants / 會議參與者'
+        # Note: unique_together removed because external participants don't have user
+        # Validation should be done in the serializer/view layer
+    
+    def __str__(self):
+        if self.is_external:
+            return f"{self.external_name} ({self.role}) - {self.meeting.title}"
+        if self.user:
+            return f"{self.user.full_name} ({self.role}) - {self.meeting.title}"
+        return f"Unknown ({self.role}) - {self.meeting.title}"
+
+
 # =================================================================
 # AI Agent System - Action Logging & Autonomous Operations
 # =================================================================

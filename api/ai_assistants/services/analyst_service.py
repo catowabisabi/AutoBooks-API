@@ -10,6 +10,7 @@ import base64
 import numpy as np
 import pandas as pd
 import plotly.express as px
+from uuid import UUID
 from openai import OpenAI
 from collections import Counter
 from django.conf import settings
@@ -22,6 +23,29 @@ from ai_assistants.agents.prompts import (
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 dataframe_cache = {}
+
+
+def convert_uuid_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert UUID columns to strings to avoid aggregation errors / 將 UUID 欄位轉換為字串以避免聚合錯誤"""
+    for col in df.columns:
+        try:
+            # Check if column contains UUID objects
+            if df[col].dtype == 'object' and len(df[col]) > 0:
+                first_non_null = df[col].dropna().head(1)
+                if len(first_non_null) > 0 and isinstance(first_non_null.iloc[0], UUID):
+                    df[col] = df[col].astype(str)
+            # Also handle columns that might have UUID as string representation
+            elif col.endswith('_id') or col == 'id':
+                # Force ID columns to be strings
+                df[col] = df[col].astype(str)
+        except Exception:
+            # If conversion fails, try to convert to string anyway for ID-like columns
+            if col.endswith('_id') or col == 'id':
+                try:
+                    df[col] = df[col].astype(str)
+                except Exception:
+                    pass
+    return df
 
 
 def load_all_datasets():
@@ -73,6 +97,8 @@ def load_all_datasets():
                 'unit_price', 'tax_amount', 'discount_amount', 'line_total', 
                 'category', 'date', 'customer'
             ]
+            # Convert UUID columns to strings
+            convert_uuid_columns(df_lines)
             # Convert to proper types
             df_lines['date'] = pd.to_datetime(df_lines['date'])
             df_lines['year'] = df_lines['date'].dt.year
@@ -95,9 +121,15 @@ def load_all_datasets():
                 'customer_id', 'contact_type', 'company_name', 'contact_name', 
                 'email', 'city', 'state', 'country', 'payment_terms', 'credit_limit'
             ]
+            # Convert UUID columns to strings
+            convert_uuid_columns(df_contacts)
             df_contacts['credit_limit'] = df_contacts['credit_limit'].astype(float)
         else:
             df_contacts = pd.DataFrame()
+        
+        # Convert UUIDs in invoices as well
+        if not df_invoices.empty:
+            convert_uuid_columns(df_invoices)
         
         # Store in cache - use invoice lines as primary analysis data for more detail
         if not df_lines.empty:
@@ -153,16 +185,42 @@ def load_all_datasets():
 def handle_query_logic(query: str) -> dict:
     """Handle user query and generate response / 處理用戶查詢並生成回應"""
     df = dataframe_cache.get("analysis_data")
+    
+    # Auto-load data if not available / 如果數據不可用則自動載入
     if df is None or df.empty:
-        return {
-            "type": "error", 
-            "message": "No analysis data found. Please call /start first or generate sample data. / 找不到分析數據，請先呼叫 /start 或生成範例數據。"
-        }
+        try:
+            load_result = load_all_datasets()
+            if load_result.get("empty"):
+                return {
+                    "type": "error", 
+                    "message": "No analysis data found. Please call /start first or generate sample data. / 找不到分析數據，請先呼叫 /start 或生成範例數據。"
+                }
+            df = dataframe_cache.get("analysis_data")
+            if df is None or df.empty:
+                return {
+                    "type": "error", 
+                    "message": "Failed to auto-load data. Please try refreshing the page. / 自動載入數據失敗，請嘗試刷新頁面。"
+                }
+        except Exception as load_error:
+            return {
+                "type": "error", 
+                "message": f"No analysis data found and auto-load failed: {load_error} / 找不到分析數據且自動載入失敗"
+            }
     
     try:
         query_type = classify_analysis_query(query, df.columns.tolist())
     except Exception as e:
-        return {"type": "error", "message": f"Error classifying query: {e}"}
+        # If classification fails, treat as general chat
+        query_type = "CHAT"
+
+    # Check if user explicitly asks for a chart
+    chart_keywords = ['chart', 'graph', 'plot', 'pie', 'bar', 'line', 'scatter', '圖表', '圖', '餅圖', '柱狀圖', '折線圖', 'visualization', 'visualize']
+    query_lower = query.lower()
+    wants_chart = any(kw in query_lower for kw in chart_keywords)
+    
+    # If user wants a chart but query_type is not GRAPH, force it
+    if wants_chart and query_type not in ["GRAPH"]:
+        query_type = "GRAPH"
 
     if query_type == "DATA_ANALYSIS":
         response_obj = generate_response(query, df, query_type)
@@ -192,14 +250,78 @@ def handle_query_logic(query: str) -> dict:
             if fig is None:
                 raise ValueError("Graph variable 'fig' not found.")
             fig_dict = json.loads(fig.to_json())
-            return convert_plotly_to_recharts_format(fig_dict)
+            result = convert_plotly_to_recharts_format(fig_dict)
+            
+            # Add a message explaining the chart
+            if result.get("type") not in ["error", "unsupported"]:
+                result["message"] = f"Here's the analysis for \"{query}\":\n\n**{result.get('title', 'Analysis Result')}**"
+            
+            return result
         except Exception as e:
-            return {"type": "error", "message": f"Error executing graph query: {e}"}
+            # If graph generation fails, try to provide a helpful error with data summary
+            return {
+                "type": "error", 
+                "message": f"Error generating chart: {e}\n\n**Available columns:** {', '.join(df.columns.tolist())}\n\nTry specifying the exact column names in your query."
+            }
+
+    elif query_type == "CHAT":
+        # General conversation - multimodal support
+        response_obj = generate_chat_response(query, df)
+        return response_obj
 
     else:
-        response_obj = generate_response(query, df, "INVALID")
-        message = response_obj.get("code", "I can't answer that query with the available data. / 無法用現有數據回答該問題。")
-        return {"type": "invalid", "message": message}
+        # INVALID or unknown - try chat response
+        response_obj = generate_chat_response(query, df)
+        return response_obj
+
+
+def generate_chat_response(query: str, data: pd.DataFrame) -> dict:
+    """Generate a general chat response - multimodal AI conversation / 生成一般對話回應 - 多模態 AI 對話"""
+    try:
+        columns = ", ".join(data.columns) if not data.empty else "No data"
+        row_count = len(data) if not data.empty else 0
+        
+        # Get sample data for context
+        sample_data = ""
+        if not data.empty:
+            sample_data = f"\n\n範例數據 (前5行):\n{data.head(5).to_string()}"
+        
+        system_prompt = f"""你是一個友善的 AI 數據分析助手。你可以:
+1. 回答關於數據分析的問題
+2. 解釋圖表和統計概念
+3. 提供數據洞察建議
+4. 進行一般性對話
+
+當前數據集:
+- 欄位: {columns}
+- 行數: {row_count}
+{sample_data}
+
+請用中文或英文回答（根據用戶的語言）。
+如果用戶問的是關於數據的問題，盡量提供有用的分析建議。
+如果用戶要求圖表但你無法生成，請建議他們使用更具體的查詢。
+如果是一般對話，請友善回應。
+支持 Markdown 格式，包括：
+- **粗體** 和 *斜體*
+- 列表和編號
+- `代碼` 和代碼塊
+- 表格等"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query}
+            ],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        content = response.choices[0].message.content
+        return {"type": "text", "message": content}
+        
+    except Exception as e:
+        return {"type": "error", "message": f"Chat error: {e}"}
 
 
 def generate_response(query, data: pd.DataFrame, query_type: str):
@@ -208,6 +330,9 @@ def generate_response(query, data: pd.DataFrame, query_type: str):
         prompt = get_data_manipulation_prompt()
     elif query_type == "GRAPH":
         prompt = get_data_visualization_prompt()
+    elif query_type == "CHAT":
+        # General chat/conversation - multimodal support
+        return generate_chat_response(query, data)
     else:
         prompt = get_invalid_query_prompt()
 
@@ -229,7 +354,24 @@ Total Rows: {len(data)}
             max_tokens=500,
             temperature=0
         )
-        return json.loads(response.choices[0].message.content)
+        response_text = response.choices[0].message.content
+        
+        # Try to parse as JSON
+        try:
+            # Clean up response - remove markdown code blocks if present
+            cleaned = response_text.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:]
+            if cleaned.startswith("```"):
+                cleaned = cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+            
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            # If JSON parsing fails, return as chat response
+            return {"type": "CHAT", "code": response_text}
     except Exception as e:
         return {"type": "INVALID", "code": f"Error: {e}"}
 

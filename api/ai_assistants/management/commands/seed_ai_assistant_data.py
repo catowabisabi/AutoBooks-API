@@ -21,6 +21,9 @@ from ai_assistants.models import (
     AIDocument, DocumentType,
     # Brainstorming
     BrainstormSession, BrainstormIdea,
+    # Brainstorming Meeting
+    BrainstormMeeting, BrainstormMeetingParticipant,
+    MeetingStatus, MeetingParticipantRole, MeetingParticipantStatus,
 )
 from business.models import Company, AuditProject, BMIIPOPRRecord
 
@@ -71,6 +74,7 @@ class Command(BaseCommand):
         self.seed_planner_tasks(user, companies, projects, options['tasks'])
         self.seed_schedule_events(user)
         self.seed_brainstorm_sessions(user, companies, campaigns)
+        self.seed_brainstorm_meetings(user, companies, campaigns)
         
         self.stdout.write(self.style.SUCCESS('✅ AI Assistants data seeding completed!'))
 
@@ -85,6 +89,8 @@ class Command(BaseCommand):
         AIDocument.objects.all().delete()
         BrainstormSession.objects.all().delete()
         BrainstormIdea.objects.all().delete()
+        BrainstormMeetingParticipant.objects.all().delete()
+        BrainstormMeeting.objects.all().delete()
         self.stdout.write(self.style.WARNING('Existing data cleared.'))
 
     def get_or_create_user(self):
@@ -681,3 +687,309 @@ Wisematic''',
         self.stdout.write(f'  Created {len(sessions_data)} brainstorm sessions')
         self.stdout.write(f'  Total sessions: {BrainstormSession.objects.count()}')
         self.stdout.write(f'  Total ideas: {BrainstormIdea.objects.count()}')
+
+    def seed_brainstorm_meetings(self, user, companies, campaigns):
+        """Create demo brainstorm meetings with participants"""
+        self.stdout.write('Seeding brainstorm meetings...')
+        
+        # Get some users for participants
+        users = list(User.objects.filter(is_active=True)[:10])
+        if not users:
+            users = [user]
+        
+        meetings_data = [
+            {
+                'title': 'Q1 2025 Marketing Strategy Brainstorm',
+                'description': '團隊腦力激盪會議，討論2025年第一季度的市場營銷策略',
+                'meeting_type': 'IN_PERSON',
+                'location': 'Conference Room A - 3/F',
+                'status': MeetingStatus.COMPLETED,
+                'agenda': '''1. 回顧2024年營銷成效
+2. 討論目標客戶群體
+3. 腦力激盪：新渠道開發
+4. 預算分配討論
+5. 行動計劃制定''',
+                'objectives': ['確定Q1營銷目標', '識別新機會', '分配資源'],
+                'ideas': [
+                    {'content': '開發短影片營銷內容', 'author': 'Marketing Team', 'votes': 5},
+                    {'content': '與行業KOL合作推廣', 'author': 'PR Team', 'votes': 3},
+                    {'content': '舉辦線上研討會', 'author': 'Sales Team', 'votes': 4},
+                    {'content': '優化社交媒體廣告投放', 'author': 'Digital Team', 'votes': 2},
+                ],
+                'action_items': [
+                    {'task': '準備KOL合作提案', 'assignee': 'Marketing Manager', 'deadline': '2025-01-15'},
+                    {'task': '設計研討會內容', 'assignee': 'Content Team', 'deadline': '2025-01-20'},
+                ],
+                'decisions_made': ['確定使用短影片策略', '預算增加20%投放數字廣告'],
+                'participant_count': 8,
+                'days_offset': -5,
+                'duration_hours': 2,
+            },
+            {
+                'title': '新產品發布會議',
+                'description': '討論即將推出的新產品發布計劃和策略',
+                'meeting_type': 'HYBRID',
+                'location': 'Board Room + Zoom',
+                'meeting_link': 'https://zoom.us/j/123456789',
+                'status': MeetingStatus.COMPLETED,
+                'agenda': '''1. 產品功能介紹
+2. 目標市場分析
+3. 發布時間線
+4. 媒體策略
+5. Q&A''',
+                'objectives': ['確定發布日期', '分配任務', '準備媒體資料'],
+                'ideas': [
+                    {'content': '舉辦線上發布會', 'author': 'Events Team', 'votes': 6},
+                    {'content': '準備新聞稿', 'author': 'PR Team', 'votes': 4},
+                    {'content': '建立產品落地頁', 'author': 'Web Team', 'votes': 5},
+                ],
+                'action_items': [
+                    {'task': '完成新聞稿初稿', 'assignee': 'PR Manager', 'deadline': '2025-01-10'},
+                    {'task': '設計落地頁', 'assignee': 'Design Team', 'deadline': '2025-01-12'},
+                ],
+                'decisions_made': ['發布日期定為2月1日', '線上線下同步發布'],
+                'participant_count': 12,
+                'days_offset': -3,
+                'duration_hours': 3,
+            },
+            {
+                'title': '客戶服務改進研討會',
+                'description': '分析客戶反饋，討論服務改進方案',
+                'meeting_type': 'ONLINE',
+                'location': '',
+                'meeting_link': 'https://teams.microsoft.com/l/meetup-join/123',
+                'status': MeetingStatus.SCHEDULED,
+                'agenda': '''1. 客戶滿意度調查結果
+2. 常見問題分析
+3. 改進建議討論
+4. 培訓計劃''',
+                'objectives': ['提高客戶滿意度', '減少投訴', '優化服務流程'],
+                'ideas': [],
+                'action_items': [],
+                'decisions_made': [],
+                'participant_count': 6,
+                'days_offset': 3,
+                'duration_hours': 1.5,
+            },
+            {
+                'title': '技術架構討論會',
+                'description': '討論系統升級和技術架構優化方案',
+                'meeting_type': 'IN_PERSON',
+                'location': 'Tech Lab - 5/F',
+                'status': MeetingStatus.SCHEDULED,
+                'agenda': '''1. 現有架構分析
+2. 瓶頸識別
+3. 解決方案討論
+4. 實施計劃''',
+                'objectives': ['優化系統性能', '提高可擴展性', '降低運維成本'],
+                'ideas': [],
+                'action_items': [],
+                'decisions_made': [],
+                'participant_count': 5,
+                'days_offset': 7,
+                'duration_hours': 2,
+            },
+            {
+                'title': '年度戰略規劃會議',
+                'description': '2025年度公司戰略規劃腦力激盪',
+                'meeting_type': 'IN_PERSON',
+                'location': 'Executive Board Room',
+                'status': MeetingStatus.IN_PROGRESS,
+                'agenda': '''1. 2024年度回顧
+2. 市場趨勢分析
+3. 競爭格局討論
+4. 戰略方向制定
+5. 資源配置''',
+                'objectives': ['制定2025年戰略', '確定增長目標', '分配部門預算'],
+                'ideas': [
+                    {'content': '擴展東南亞市場', 'author': 'CEO', 'votes': 8},
+                    {'content': '投資AI技術研發', 'author': 'CTO', 'votes': 7},
+                    {'content': '建立戰略合作夥伴關係', 'author': 'BD Team', 'votes': 5},
+                ],
+                'action_items': [],
+                'decisions_made': [],
+                'participant_count': 10,
+                'days_offset': 0,
+                'duration_hours': 4,
+            },
+            {
+                'title': '品牌重塑討論',
+                'description': '探討公司品牌形象更新和市場定位',
+                'meeting_type': 'HYBRID',
+                'location': 'Marketing Office + Google Meet',
+                'meeting_link': 'https://meet.google.com/abc-defg-hij',
+                'status': MeetingStatus.POSTPONED,
+                'agenda': '''1. 品牌現狀分析
+2. 競品品牌研究
+3. 新品牌方向討論
+4. 視覺識別設計''',
+                'objectives': ['更新品牌形象', '提高品牌認知度', '統一視覺識別'],
+                'ideas': [
+                    {'content': '設計新Logo', 'author': 'Design Lead', 'votes': 3},
+                    {'content': '更新品牌色彩', 'author': 'Marketing', 'votes': 2},
+                ],
+                'action_items': [],
+                'decisions_made': [],
+                'participant_count': 7,
+                'days_offset': 14,
+                'duration_hours': 2,
+            },
+            {
+                'title': 'IPO 準備會議',
+                'description': '討論公司上市準備工作和時間表',
+                'meeting_type': 'IN_PERSON',
+                'location': 'Board Room - Confidential',
+                'status': MeetingStatus.COMPLETED,
+                'agenda': '''1. 上市時間表
+2. 法律合規要求
+3. 財務審計準備
+4. 投資者關係策略''',
+                'objectives': ['確定上市時間表', '識別合規要求', '準備財務文件'],
+                'ideas': [
+                    {'content': '聘請外部法律顧問', 'author': 'Legal Team', 'votes': 6},
+                    {'content': '建立投資者關係網站', 'author': 'IR Team', 'votes': 4},
+                    {'content': '準備招股書初稿', 'author': 'Finance', 'votes': 5},
+                ],
+                'action_items': [
+                    {'task': '完成財務審計', 'assignee': 'CFO', 'deadline': '2025-03-01'},
+                    {'task': '聘請承銷商', 'assignee': 'CEO', 'deadline': '2025-02-15'},
+                ],
+                'decisions_made': ['目標Q3完成上市', '選擇香港交易所'],
+                'participant_count': 6,
+                'days_offset': -10,
+                'duration_hours': 3,
+            },
+            {
+                'title': '團隊建設活動規劃',
+                'description': '討論下季度團隊建設活動方案',
+                'meeting_type': 'ONLINE',
+                'location': '',
+                'meeting_link': 'https://zoom.us/j/987654321',
+                'status': MeetingStatus.SCHEDULED,
+                'agenda': '''1. 預算討論
+2. 活動類型選擇
+3. 日期協調
+4. 後勤安排''',
+                'objectives': ['增強團隊凝聚力', '提高員工士氣', '促進跨部門合作'],
+                'ideas': [],
+                'action_items': [],
+                'decisions_made': [],
+                'participant_count': 4,
+                'days_offset': 5,
+                'duration_hours': 1,
+            },
+        ]
+        
+        for data in meetings_data:
+            # Calculate meeting times
+            base_time = timezone.now() + timedelta(days=data['days_offset'])
+            scheduled_start = base_time.replace(hour=10, minute=0, second=0, microsecond=0)
+            scheduled_end = scheduled_start + timedelta(hours=data['duration_hours'])
+            
+            # Set actual times for completed meetings
+            actual_start = None
+            actual_end = None
+            if data['status'] == MeetingStatus.COMPLETED:
+                actual_start = scheduled_start
+                actual_end = scheduled_end
+            elif data['status'] == MeetingStatus.IN_PROGRESS:
+                actual_start = scheduled_start
+            
+            # Get a random company and campaign for relation
+            company = random.choice(companies) if companies else None
+            campaign = random.choice(campaigns) if campaigns else None
+            
+            meeting = BrainstormMeeting.objects.create(
+                title=data['title'],
+                description=data['description'],
+                status=data['status'],
+                scheduled_start=scheduled_start,
+                scheduled_end=scheduled_end,
+                actual_start=actual_start,
+                actual_end=actual_end,
+                location=data['location'],
+                meeting_link=data.get('meeting_link', ''),
+                meeting_type=data['meeting_type'],
+                agenda=data['agenda'],
+                objectives=data['objectives'],
+                meeting_notes=f"會議記錄：{data['title']}" if data['status'] == MeetingStatus.COMPLETED else '',
+                summary=f"會議總結：{data['description']}" if data['status'] == MeetingStatus.COMPLETED else '',
+                action_items=data['action_items'],
+                decisions_made=data['decisions_made'],
+                ideas_generated=[
+                    {**idea, 'created_at': (timezone.now() - timedelta(days=abs(data['days_offset']))).isoformat()}
+                    for idea in data['ideas']
+                ],
+                selected_ideas=[idea for idea in data['ideas'] if idea.get('votes', 0) >= 5],
+                organizer=user,
+                max_participants=data['participant_count'] + 5,
+                related_client=company,
+                related_campaign=campaign,
+                tags=['brainstorm', data['meeting_type'].lower(), data['status'].lower()],
+            )
+            
+            # Add organizer as participant
+            BrainstormMeetingParticipant.objects.create(
+                meeting=meeting,
+                user=user,
+                role=MeetingParticipantRole.ORGANIZER,
+                status=MeetingParticipantStatus.ATTENDED if data['status'] == MeetingStatus.COMPLETED else MeetingParticipantStatus.ACCEPTED,
+                joined_at=actual_start,
+                left_at=actual_end,
+                ideas_contributed=random.randint(1, 5) if data['status'] == MeetingStatus.COMPLETED else 0,
+                votes_cast=random.randint(0, 3) if data['status'] == MeetingStatus.COMPLETED else 0,
+            )
+            
+            # Add other participants
+            participant_users = random.sample(users, min(data['participant_count'] - 1, len(users) - 1))
+            roles = [MeetingParticipantRole.FACILITATOR, MeetingParticipantRole.PRESENTER, 
+                     MeetingParticipantRole.PARTICIPANT, MeetingParticipantRole.NOTETAKER]
+            
+            for i, participant_user in enumerate(participant_users):
+                if participant_user == user:
+                    continue
+                    
+                # Determine status based on meeting status
+                if data['status'] == MeetingStatus.COMPLETED:
+                    p_status = MeetingParticipantStatus.ATTENDED
+                    joined_at = actual_start + timedelta(minutes=random.randint(0, 10)) if actual_start else None
+                    left_at = actual_end - timedelta(minutes=random.randint(0, 5)) if actual_end else None
+                elif data['status'] == MeetingStatus.IN_PROGRESS:
+                    p_status = random.choice([MeetingParticipantStatus.ACCEPTED, MeetingParticipantStatus.ATTENDED])
+                    joined_at = actual_start + timedelta(minutes=random.randint(0, 10)) if actual_start else None
+                    left_at = None
+                else:
+                    p_status = random.choice([MeetingParticipantStatus.INVITED, MeetingParticipantStatus.ACCEPTED, MeetingParticipantStatus.TENTATIVE])
+                    joined_at = None
+                    left_at = None
+                
+                BrainstormMeetingParticipant.objects.create(
+                    meeting=meeting,
+                    user=participant_user,
+                    role=roles[i % len(roles)] if i < len(roles) else MeetingParticipantRole.PARTICIPANT,
+                    status=p_status,
+                    responded_at=timezone.now() - timedelta(days=random.randint(1, 7)) if p_status != MeetingParticipantStatus.INVITED else None,
+                    joined_at=joined_at,
+                    left_at=left_at,
+                    ideas_contributed=random.randint(0, 3) if data['status'] == MeetingStatus.COMPLETED else 0,
+                    votes_cast=random.randint(0, 5) if data['status'] == MeetingStatus.COMPLETED else 0,
+                )
+            
+            # Add some external participants
+            if random.random() < 0.3:  # 30% chance to have external participants
+                external_count = random.randint(1, 3)
+                for j in range(external_count):
+                    BrainstormMeetingParticipant.objects.create(
+                        meeting=meeting,
+                        user=None,
+                        is_external=True,
+                        external_name=fake.name(),
+                        external_email=fake.email(),
+                        external_company=fake.company(),
+                        role=MeetingParticipantRole.OBSERVER,
+                        status=MeetingParticipantStatus.ACCEPTED if data['status'] != MeetingStatus.SCHEDULED else MeetingParticipantStatus.INVITED,
+                    )
+        
+        self.stdout.write(f'  Created {len(meetings_data)} brainstorm meetings')
+        self.stdout.write(f'  Total meetings: {BrainstormMeeting.objects.count()}')
+        self.stdout.write(f'  Total participants: {BrainstormMeetingParticipant.objects.count()}')

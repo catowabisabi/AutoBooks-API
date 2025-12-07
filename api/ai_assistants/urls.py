@@ -28,11 +28,23 @@ from ai_assistants.views.email_viewset import (
 from ai_assistants.views.brainstorm_viewset import (
     BrainstormSessionViewSet,
     BrainstormIdeaViewSet,
+    BrainstormMeetingViewSet,
+    BrainstormMeetingParticipantViewSet,
 )
 from ai_assistants.views.finance_viewset import ReceiptAnalyzerViewSet
 from ai_assistants.views.ai_service_viewset import AIServiceViewSet
 from ai_assistants.views.accounting_viewset import AccountingAssistantViewSet
 from ai_assistants.views.agent_viewset import AIAgentViewSet
+from ai_assistants.views.visualization_viewset import (
+    ChartTypesView,
+    AnalyzeDataView,
+    GenerateChartView,
+    GenerateChartWithAIView,
+    DocumentChartView,
+    FileVisualizationView,
+    DashboardChartsView,
+    QuickChartView,
+)
 
 # Router for viewsets
 router = DefaultRouter()
@@ -54,6 +66,8 @@ router.register(r'document-assistant/comparisons', DocumentComparisonViewSet, ba
 # Brainstorming Assistant Router
 router.register(r'brainstorm-assistant/sessions', BrainstormSessionViewSet, basename='brainstorm-session')
 router.register(r'brainstorm-assistant/ideas', BrainstormIdeaViewSet, basename='brainstorm-idea')
+router.register(r'brainstorm-assistant/meetings', BrainstormMeetingViewSet, basename='brainstorm-meeting')
+router.register(r'brainstorm-assistant/participants', BrainstormMeetingParticipantViewSet, basename='brainstorm-participant')
 
 urlpatterns = [
     # AI Service (unified AI API)
@@ -149,6 +163,32 @@ urlpatterns = [
     path("agent/sessions/<str:session_id>/", 
          AIAgentViewSet.as_view({"get": "get_session"}), 
          name="ai-agent-session-detail"),
+    
+    # Visualization API / 視覺化 API
+    path("visualization/chart-types/", 
+         ChartTypesView.as_view(), 
+         name="visualization-chart-types"),
+    path("visualization/analyze/", 
+         AnalyzeDataView.as_view(), 
+         name="visualization-analyze"),
+    path("visualization/generate/", 
+         GenerateChartView.as_view(), 
+         name="visualization-generate"),
+    path("visualization/generate-ai/", 
+         GenerateChartWithAIView.as_view(), 
+         name="visualization-generate-ai"),
+    path("visualization/document/<int:document_id>/", 
+         DocumentChartView.as_view(), 
+         name="visualization-document"),
+    path("visualization/upload/", 
+         FileVisualizationView.as_view(), 
+         name="visualization-upload"),
+    path("visualization/dashboard/", 
+         DashboardChartsView.as_view(), 
+         name="visualization-dashboard"),
+    path("visualization/quick/", 
+         QuickChartView.as_view(), 
+         name="visualization-quick"),
     
     # Include router URLs
     path("", include(router.urls)),
