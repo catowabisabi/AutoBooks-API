@@ -7,10 +7,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.permissions import IsAuthenticated
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import tempfile
 import os
+import logging
 
 from ai_assistants.services.visualization_service import (
     analyze_data_structure,
@@ -22,6 +24,13 @@ from ai_assistants.services.visualization_service import (
     generate_dashboard_charts,
     CHART_TYPES
 )
+from ai_assistants.services.file_validation import (
+    validate_data_file,
+    FileValidationError,
+    MAX_CSV_SIZE,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class ChartTypesView(APIView):
@@ -184,6 +193,7 @@ class DocumentChartView(APIView):
 class FileVisualizationView(APIView):
     """Upload and visualize a file / 上傳並視覺化文件"""
     parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]
     
     def post(self, request):
         file = request.FILES.get('file')
@@ -193,6 +203,13 @@ class FileVisualizationView(APIView):
                 {'error': 'No file provided'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Comprehensive file validation
+        try:
+            ext, mime_type = validate_data_file(file)
+            logger.info(f"File validated: {file.name} ({ext}, {mime_type})")
+        except FileValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
         # Determine file type
         file_name = file.name.lower()

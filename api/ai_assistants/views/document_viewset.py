@@ -2,10 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
 from ai_assistants.serializers.document_serializer import DocumentQuerySerializer, CombinedDocumentSerializer
 from ai_assistants.services.document_service import process_document, is_allowed_file, document_cache
 from ai_assistants.agents.document_classifier import classify_document_query
 from ai_assistants.services.document_service import handle_document_query_logic
+from ai_assistants.services.file_validation import (
+    validate_document,
+    validate_upload,
+    FileValidationError,
+    MAX_FILE_SIZE,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,12 +20,20 @@ logger = logging.getLogger(__name__)
 
 class DocumentUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         file = request.FILES.get("file")
 
         if not file:
             return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Comprehensive file validation
+        try:
+            ext, mime_type = validate_document(file)
+            logger.info(f"File validated: {file.name} ({ext}, {mime_type})")
+        except FileValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         if not is_allowed_file(file.name):
             return Response({
@@ -78,6 +93,7 @@ class CombinedDocumentProcessingView(APIView):
     --form 'return_document_data="false"'
     """
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = CombinedDocumentSerializer(data=request.data)
@@ -88,6 +104,13 @@ class CombinedDocumentProcessingView(APIView):
         file = serializer.validated_data["file"]
         query = serializer.validated_data["query"]
         return_document_data = serializer.validated_data.get("return_document_data", False)
+
+        # Comprehensive file validation
+        try:
+            ext, mime_type = validate_document(file)
+            logger.info(f"File validated: {file.name} ({ext}, {mime_type})")
+        except FileValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validate file type
         if not is_allowed_file(file.name):

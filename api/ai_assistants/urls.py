@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from ai_assistants.views.analyst_viewset import (
     AnalystDataView,
     AnalystQueryView,
+    AnalystSchemaView,
     StartDatasetLoadView as AnalystStartDatasetLoadView,
 )
 from ai_assistants.views.planner_viewset import (
@@ -45,6 +46,10 @@ from ai_assistants.views.visualization_viewset import (
     DashboardChartsView,
     QuickChartView,
 )
+from ai_assistants.views.project_viewset import (
+    AccountingProjectViewSet,
+    UnrecognizedReceiptsViewSet,
+)
 
 # Router for viewsets
 router = DefaultRouter()
@@ -62,6 +67,9 @@ router.register(r'planner-assistant/events', ScheduleEventViewSet, basename='sch
 # Document Assistant Router
 router.register(r'document-assistant/documents', AIDocumentViewSet, basename='ai-document')
 router.register(r'document-assistant/comparisons', DocumentComparisonViewSet, basename='document-comparison')
+
+# Accounting Projects Router / 會計項目路由
+router.register(r'accounting-projects', AccountingProjectViewSet, basename='accounting-project')
 
 # Brainstorming Assistant Router
 router.register(r'brainstorm-assistant/sessions', BrainstormSessionViewSet, basename='brainstorm-session')
@@ -81,6 +89,7 @@ urlpatterns = [
     path("analyst-assistant/start/", AnalystStartDatasetLoadView.as_view(), name="analyst-assistant-start"),
     path("analyst-assistant/data/", AnalystDataView.as_view(), name="analyst-assistant-data"),
     path("analyst-assistant/query/", AnalystQueryView.as_view(), name="analyst-assistant-query"),
+    path("analyst-assistant/schema/", AnalystSchemaView.as_view(), name="analyst-assistant-schema"),
     
     # Planner Assistant
     path("planner-assistant/start/", PlannerStartDatasetLoadView.as_view(), name="planner-assistant-start"),
@@ -140,6 +149,20 @@ urlpatterns = [
     path("accounting-assistant/stats/", 
          AccountingAssistantViewSet.as_view({"get": "get_stats"}), 
          name="accounting-assistant-stats"),
+    
+    # Unrecognized Receipts / 無法識別收據
+    path("accounting-assistant/unrecognized/", 
+         UnrecognizedReceiptsViewSet.as_view({"get": "list"}), 
+         name="accounting-assistant-unrecognized"),
+    path("accounting-assistant/unrecognized/<uuid:pk>/", 
+         UnrecognizedReceiptsViewSet.as_view({"get": "retrieve"}), 
+         name="accounting-assistant-unrecognized-detail"),
+    path("accounting-assistant/unrecognized/<uuid:pk>/reclassify/", 
+         UnrecognizedReceiptsViewSet.as_view({"post": "reclassify"}), 
+         name="accounting-assistant-reclassify"),
+    path("accounting-assistant/unrecognized/batch-reclassify/", 
+         UnrecognizedReceiptsViewSet.as_view({"post": "batch_reclassify"}), 
+         name="accounting-assistant-batch-reclassify"),
     
     # AI Agent / AI代理 (Autonomous CRUD with logging)
     path("agent/chat/", 

@@ -6,6 +6,7 @@ This service loads data from Django models instead of CSV files.
 """
 
 import json
+import time
 import base64
 import numpy as np
 import pandas as pd
@@ -20,7 +21,26 @@ from ai_assistants.agents.prompts import (
     get_data_visualization_prompt,
     get_invalid_query_prompt
 )
+from ai_assistants.services.safe_exec import safe_eval, safe_exec, UnsafeCodeError
+from ai_assistants.services.ai_request_controls import (
+    ai_request_controller,
+    estimate_tokens,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_MAX_TOKENS,
+)
+from ai_assistants.services.observability import (
+    track_data_load,
+    track_ai_call,
+    measure_time,
+    token_tracker,
+)
+from ai_assistants.services.rag_service import (
+    build_rag_context,
+    get_relevant_documents,
+)
+import logging
 
+logger = logging.getLogger('analyst')
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 dataframe_cache = {}
 
@@ -48,6 +68,7 @@ def convert_uuid_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+@track_data_load
 def load_all_datasets():
     """Load data from database into pandas DataFrames / 從資料庫載入數據"""
     try:
@@ -225,7 +246,11 @@ def handle_query_logic(query: str) -> dict:
     if query_type == "DATA_ANALYSIS":
         response_obj = generate_response(query, df, query_type)
         try:
-            result = eval(response_obj["code"], {"df": df, "pd": pd})
+            # Use safe_eval instead of eval for security
+            code = response_obj.get("code", "")
+            logger.info(f"Executing DATA_ANALYSIS code: {code[:100]}...")
+            
+            result = safe_eval(code, df)
             
             # Handle different result types
             if isinstance(result, pd.DataFrame):
@@ -238,14 +263,21 @@ def handle_query_logic(query: str) -> dict:
                 data = [{"Result": str(result)}]
                 
             return {"type": "table", "data": data}
+        except UnsafeCodeError as e:
+            logger.warning(f"Unsafe code detected: {e}")
+            return {"type": "error", "message": "The generated query contains unsafe operations. Please try a different question."}
         except Exception as e:
+            logger.error(f"DATA_ANALYSIS execution error: {e}")
             return {"type": "error", "message": f"Error executing query: {e}"}
 
     elif query_type == "GRAPH":
         response_obj = generate_response(query, df, query_type)
         try:
-            namespace = {"df": df, "pd": pd, "px": px}
-            exec(response_obj["code"], namespace)
+            # Use safe_exec instead of exec for security
+            code = response_obj.get("code", "")
+            logger.info(f"Executing GRAPH code: {code[:100]}...")
+            
+            namespace = safe_exec(code, df)
             fig = namespace.get("fig")
             if fig is None:
                 raise ValueError("Graph variable 'fig' not found.")
@@ -257,7 +289,11 @@ def handle_query_logic(query: str) -> dict:
                 result["message"] = f"Here's the analysis for \"{query}\":\n\n**{result.get('title', 'Analysis Result')}**"
             
             return result
+        except UnsafeCodeError as e:
+            logger.warning(f"Unsafe code detected in graph: {e}")
+            return {"type": "error", "message": "The generated chart code contains unsafe operations. Please try a different question."}
         except Exception as e:
+            logger.error(f"GRAPH execution error: {e}")
             # If graph generation fails, try to provide a helpful error with data summary
             return {
                 "type": "error", 
@@ -275,9 +311,22 @@ def handle_query_logic(query: str) -> dict:
         return response_obj
 
 
-def generate_chat_response(query: str, data: pd.DataFrame) -> dict:
+def generate_chat_response(query: str, data: pd.DataFrame, user_id: str = "anonymous") -> dict:
     """Generate a general chat response - multimodal AI conversation / 生成一般對話回應 - 多模態 AI 對話"""
+    start_time = time.time()
+    input_tokens = 0
+    output_tokens = 0
+    
     try:
+        # Check quota before making request
+        estimated_tokens = estimate_tokens(query) + 500  # Add buffer for response
+        quota_check = ai_request_controller.check_request(user_id, estimated_tokens)
+        if not quota_check['allowed']:
+            return {
+                "type": "error", 
+                "message": f"Daily quota exceeded: {quota_check['reason']}. Remaining: {quota_check['remaining']}"
+            }
+        
         columns = ", ".join(data.columns) if not data.empty else "No data"
         row_count = len(data) if not data.empty else 0
         
@@ -286,20 +335,34 @@ def generate_chat_response(query: str, data: pd.DataFrame) -> dict:
         if not data.empty:
             sample_data = f"\n\n範例數據 (前5行):\n{data.head(5).to_string()}"
         
+        # Get RAG context from relevant documents
+        rag_context = ""
+        rag_docs = []
+        try:
+            rag_context = build_rag_context(user_id, query, max_docs=3)
+            if rag_context:
+                rag_docs = get_relevant_documents(user_id, query, max_docs=3)
+                logger.info(f"RAG: Found {len(rag_docs)} relevant documents for query")
+        except Exception as rag_error:
+            logger.warning(f"RAG retrieval failed: {rag_error}")
+        
         system_prompt = f"""你是一個友善的 AI 數據分析助手。你可以:
 1. 回答關於數據分析的問題
 2. 解釋圖表和統計概念
 3. 提供數據洞察建議
 4. 進行一般性對話
+5. 參考用戶上傳的文件內容回答問題
 
 當前數據集:
 - 欄位: {columns}
 - 行數: {row_count}
 {sample_data}
+{rag_context}
 
 請用中文或英文回答（根據用戶的語言）。
 如果用戶問的是關於數據的問題，盡量提供有用的分析建議。
 如果用戶要求圖表但你無法生成，請建議他們使用更具體的查詢。
+如果參考文件中有相關內容，請引用並說明來源。
 如果是一般對話，請友善回應。
 支持 Markdown 格式，包括：
 - **粗體** 和 *斜體*
@@ -313,14 +376,51 @@ def generate_chat_response(query: str, data: pd.DataFrame) -> dict:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": query}
             ],
-            max_tokens=1000,
-            temperature=0.7
+            max_tokens=DEFAULT_MAX_TOKENS,
+            temperature=DEFAULT_TEMPERATURE
         )
         
         content = response.choices[0].message.content
+        
+        # Record token usage
+        if response.usage:
+            input_tokens = response.usage.prompt_tokens
+            output_tokens = response.usage.completion_tokens
+        
+        duration_ms = (time.time() - start_time) * 1000
+        
+        # Log the request
+        ai_request_controller.record_request(
+            user_id=user_id,
+            action="chat_response",
+            model="gpt-4o-mini",
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            temperature=DEFAULT_TEMPERATURE,
+            max_tokens=DEFAULT_MAX_TOKENS,
+            duration_ms=duration_ms,
+            success=True,
+            prompt=query[:100],  # First 100 chars for hash
+        )
+        
         return {"type": "text", "message": content}
         
     except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        # Log failed request
+        ai_request_controller.record_request(
+            user_id=user_id,
+            action="chat_response",
+            model="gpt-4o-mini",
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            temperature=DEFAULT_TEMPERATURE,
+            max_tokens=DEFAULT_MAX_TOKENS,
+            duration_ms=duration_ms,
+            success=False,
+            error_message=str(e),
+            prompt=query[:100],
+        )
         return {"type": "error", "message": f"Chat error: {e}"}
 
 
