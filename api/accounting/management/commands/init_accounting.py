@@ -197,6 +197,28 @@ class Command(BaseCommand):
             {'code': '5310', 'name': 'Interest Expense', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OTHER_EXPENSE.value, 'parent_code': '5300'},
             {'code': '5320', 'name': 'Bank Charges', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OTHER_EXPENSE.value, 'parent_code': '5300'},
             {'code': '5330', 'name': 'Foreign Exchange Loss', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OTHER_EXPENSE.value, 'parent_code': '5300'},
+            
+            # AI CATEGORIZATION EXPENSE ACCOUNTS (6000-6999)
+            # These accounts are used by AI for automatic categorization
+            {'code': '6000', 'name': 'AI分類費用 / AI Categorized Expenses', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '5000'},
+            {'code': '6100', 'name': '辦公用品 / Office Supplies', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '6000'},
+            {'code': '6200', 'name': '交通費 / Transportation', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '6000'},
+            {'code': '6210', 'name': '差旅費 / Travel', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '6000'},
+            {'code': '6300', 'name': '伙食費 / Meals', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '6000'},
+            {'code': '6350', 'name': '培訓費 / Training', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '6000'},
+            {'code': '6400', 'name': '水電費 / Utilities', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.UTILITIES.value, 'parent_code': '6000'},
+            {'code': '6500', 'name': '交際費 / Entertainment', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '6000'},
+            {'code': '6600', 'name': '租金 / Rent', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.RENT.value, 'parent_code': '6000'},
+            {'code': '6700', 'name': '電話費 / Telephone', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.UTILITIES.value, 'parent_code': '6000'},
+            {'code': '6800', 'name': '保險費 / Insurance', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '6000'},
+            {'code': '6900', 'name': '維修費 / Maintenance', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OPERATING.value, 'parent_code': '6000'},
+            {'code': '6999', 'name': '其他費用 / Other Expenses', 'account_type': AccountType.EXPENSE.value, 'account_subtype': AccountSubType.OTHER_EXPENSE.value, 'parent_code': '6000'},
+            
+            # SPECIAL ACCOUNTS FOR AI PROCESSING
+            {'code': '1150', 'name': '進項稅額 / Input VAT', 'account_type': AccountType.ASSET.value, 'account_subtype': AccountSubType.OTHER_ASSET.value, 'parent_code': '1100'},
+            {'code': '1000', 'name': '現金 / Cash', 'account_type': AccountType.ASSET.value, 'account_subtype': AccountSubType.CASH.value, 'parent_code': '1100'},
+            {'code': '1100', 'name': '銀行存款 / Bank', 'account_type': AccountType.ASSET.value, 'account_subtype': AccountSubType.BANK.value, 'parent_code': '1000'},
+            {'code': '2100', 'name': '應付帳款-信用卡 / Credit Card Payable', 'account_type': AccountType.LIABILITY.value, 'account_subtype': AccountSubType.CREDIT_CARD.value, 'parent_code': '2000'},
         ]
         
         # Create accounts and store parent relationships

@@ -55,6 +55,29 @@ from ai_assistants.services.accounting_service import (
     compare_excel_with_database,
     get_comparison_ai_analysis,
 )
+from ai_assistants.services.journal_entry_service import (
+    JournalEntryService,
+    create_journal_from_receipt,
+    approve_receipt_with_journal,
+    batch_create_journals,
+)
+from ai_assistants.services.anomaly_detection_service import (
+    AnomalyDetectionService,
+    detect_receipt_anomalies,
+    get_anomaly_summary,
+)
+from ai_assistants.services.vendor_recognition_service import (
+    VendorRecognitionService,
+    find_or_create_vendor,
+    suggest_vendor_category,
+    process_vendor_auto,
+)
+from ai_assistants.services.recurring_expense_service import (
+    RecurringExpenseService,
+    detect_recurring,
+    predict_expenses,
+    get_recurring_report,
+)
 
 
 class AccountingAssistantViewSet(viewsets.ViewSet):
@@ -255,59 +278,120 @@ class AccountingAssistantViewSet(viewsets.ViewSet):
     @action(detail=True, methods=['post'], url_path='approve')
     def approve_receipt(self, request, pk=None):
         """
-        Approve a receipt
-        核准收據
+        Approve a receipt and optionally create journal entry
+        核准收據並可選擇自動建立分錄
         """
         try:
             receipt = Receipt.objects.get(pk=pk)
         except Receipt.DoesNotExist:
             return Response({'error': 'Receipt not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        receipt.status = ReceiptStatus.APPROVED
-        receipt.reviewed_by = request.user
-        receipt.reviewed_at = timezone.now()
-        receipt.notes = request.data.get('notes', '')
-        receipt.save()
+        # Options from request
+        auto_journal = request.data.get('auto_journal', True)  # Default to auto create journal
+        auto_post = request.data.get('auto_post', False)
+        notes = request.data.get('notes', '')
         
-        return Response({
-            'status': 'approved',
-            'receipt': ReceiptSerializer(receipt).data
-        })
+        if auto_journal:
+            # Use new service to approve and create journal entry
+            journal_entry, error = approve_receipt_with_journal(
+                receipt=receipt,
+                user=request.user,
+                notes=notes,
+                auto_post=auto_post
+            )
+            
+            if error:
+                return Response({
+                    'status': 'error',
+                    'error': error,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            return Response({
+                'status': 'approved',
+                'journal_created': True,
+                'journal_entry': {
+                    'id': str(journal_entry.id),
+                    'entry_number': journal_entry.entry_number,
+                    'date': str(journal_entry.date),
+                    'total_debit': float(journal_entry.total_debit),
+                    'total_credit': float(journal_entry.total_credit),
+                    'status': journal_entry.status,
+                },
+                'receipt': ReceiptSerializer(receipt).data
+            })
+        else:
+            # Just approve without creating journal
+            receipt.status = ReceiptStatus.APPROVED
+            receipt.reviewed_by = request.user
+            receipt.reviewed_at = timezone.now()
+            receipt.notes = notes
+            receipt.save()
+            
+            return Response({
+                'status': 'approved',
+                'journal_created': False,
+                'receipt': ReceiptSerializer(receipt).data
+            })
     
     @action(detail=True, methods=['post'], url_path='create-journal')
     def create_journal_entry(self, request, pk=None):
         """
-        Create journal entry from receipt
-        從收據建立會計分錄
+        Create journal entry from receipt (writes to actual accounting.JournalEntry)
+        從收據建立會計分錄（寫入實際的 accounting.JournalEntry）
         """
         try:
             receipt = Receipt.objects.get(pk=pk, uploaded_by=request.user)
         except Receipt.DoesNotExist:
             return Response({'error': 'Receipt not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        # Generate journal entry if not exists
-        if not receipt.journal_entry_data:
-            receipt_data = receipt.ai_raw_response or {
-                'vendor_name': receipt.vendor_name,
-                'receipt_number': receipt.receipt_number,
-                'receipt_date': str(receipt.receipt_date) if receipt.receipt_date else None,
-                'total_amount': float(receipt.total_amount),
-                'tax_amount': float(receipt.tax_amount),
-                'payment_method': receipt.payment_method,
-                'category_suggestion': receipt.category,
-            }
-            categorization = categorize_expense(receipt_data)
-            journal_entry = generate_double_entry(receipt_data, categorization)
-            receipt.journal_entry_data = journal_entry
+        # Check if journal already exists
+        if receipt.journal_entry:
+            return Response({
+                'status': 'exists',
+                'message': 'Journal entry already exists for this receipt',
+                'journal_entry': {
+                    'id': str(receipt.journal_entry.id),
+                    'entry_number': receipt.journal_entry.entry_number,
+                },
+                'receipt': ReceiptSerializer(receipt).data
+            })
         
-        # Here we would actually create the JournalEntry in accounting module
-        # For now, just update the status
-        receipt.status = ReceiptStatus.JOURNAL_CREATED
-        receipt.save()
+        # Options
+        auto_post = request.data.get('auto_post', False)
+        
+        # Create actual journal entry using new service
+        journal_entry, error = create_journal_from_receipt(
+            receipt=receipt,
+            user=request.user,
+            auto_post=auto_post
+        )
+        
+        if error:
+            return Response({
+                'status': 'error',
+                'error': error,
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({
             'status': 'journal_created',
-            'journal_entry': receipt.journal_entry_data,
+            'journal_entry': {
+                'id': str(journal_entry.id),
+                'entry_number': journal_entry.entry_number,
+                'date': str(journal_entry.date),
+                'description': journal_entry.description,
+                'total_debit': float(journal_entry.total_debit),
+                'total_credit': float(journal_entry.total_credit),
+                'status': journal_entry.status,
+                'lines': [
+                    {
+                        'account_code': line.account.code,
+                        'account_name': line.account.name,
+                        'debit': float(line.debit),
+                        'credit': float(line.credit),
+                    }
+                    for line in journal_entry.lines.all()
+                ]
+            },
             'receipt': ReceiptSerializer(receipt).data
         })
     
@@ -343,6 +427,374 @@ class AccountingAssistantViewSet(viewsets.ViewSet):
             'ai_review': ai_review,
             'receipt': ReceiptSerializer(receipt).data
         })
+    
+    # =========================================================================
+    # Batch Processing / 批量處理
+    # =========================================================================
+    
+    @action(detail=False, methods=['post'], url_path='batch-create-journals')
+    def batch_create_journals(self, request):
+        """
+        Create journal entries for multiple receipts
+        批量建立分錄
+        """
+        receipt_ids = request.data.get('receipt_ids', [])
+        auto_post = request.data.get('auto_post', False)
+        
+        if not receipt_ids:
+            return Response({
+                'status': 'error',
+                'error': 'No receipt IDs provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get receipts
+        receipts = Receipt.objects.filter(
+            id__in=receipt_ids,
+            uploaded_by=request.user,
+            journal_entry__isnull=True  # Only receipts without journal entry
+        )
+        
+        if not receipts.exists():
+            return Response({
+                'status': 'error',
+                'error': 'No valid receipts found'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Batch create
+        results = batch_create_journals(
+            receipts=list(receipts),
+            user=request.user,
+            auto_post=auto_post
+        )
+        
+        return Response({
+            'status': 'completed',
+            'results': results
+        })
+    
+    @action(detail=False, methods=['post'], url_path='batch-approve')
+    def batch_approve(self, request):
+        """
+        Approve multiple receipts and create journal entries
+        批量核准收據並建立分錄
+        """
+        receipt_ids = request.data.get('receipt_ids', [])
+        auto_journal = request.data.get('auto_journal', True)
+        auto_post = request.data.get('auto_post', False)
+        
+        if not receipt_ids:
+            return Response({
+                'status': 'error',
+                'error': 'No receipt IDs provided'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        receipts = Receipt.objects.filter(
+            id__in=receipt_ids,
+            uploaded_by=request.user
+        )
+        
+        results = {
+            'success': [],
+            'failed': [],
+            'total': receipts.count()
+        }
+        
+        for receipt in receipts:
+            try:
+                if auto_journal:
+                    journal_entry, error = approve_receipt_with_journal(
+                        receipt=receipt,
+                        user=request.user,
+                        auto_post=auto_post
+                    )
+                    if error:
+                        results['failed'].append({
+                            'receipt_id': str(receipt.id),
+                            'error': error
+                        })
+                    else:
+                        results['success'].append({
+                            'receipt_id': str(receipt.id),
+                            'journal_entry_id': str(journal_entry.id),
+                            'entry_number': journal_entry.entry_number
+                        })
+                else:
+                    receipt.status = ReceiptStatus.APPROVED
+                    receipt.reviewed_by = request.user
+                    receipt.reviewed_at = timezone.now()
+                    receipt.save()
+                    results['success'].append({
+                        'receipt_id': str(receipt.id),
+                        'journal_entry_id': None
+                    })
+            except Exception as e:
+                results['failed'].append({
+                    'receipt_id': str(receipt.id),
+                    'error': str(e)
+                })
+        
+        results['success_count'] = len(results['success'])
+        results['failed_count'] = len(results['failed'])
+        
+        return Response({
+            'status': 'completed',
+            'results': results
+        })
+    
+    @action(detail=True, methods=['post'], url_path='post-journal')
+    def post_journal_entry(self, request, pk=None):
+        """
+        Post a journal entry (update account balances)
+        過帳分錄（更新科目餘額）
+        """
+        try:
+            receipt = Receipt.objects.get(pk=pk, uploaded_by=request.user)
+        except Receipt.DoesNotExist:
+            return Response({'error': 'Receipt not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not receipt.journal_entry:
+            return Response({
+                'status': 'error',
+                'error': 'No journal entry exists for this receipt'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        service = JournalEntryService(user=request.user)
+        success, error = service.post_journal_entry(receipt.journal_entry, request.user)
+        
+        if not success:
+            return Response({
+                'status': 'error',
+                'error': error
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        receipt.refresh_from_db()
+        
+        return Response({
+            'status': 'posted',
+            'journal_entry': {
+                'id': str(receipt.journal_entry.id),
+                'entry_number': receipt.journal_entry.entry_number,
+                'status': receipt.journal_entry.status,
+            },
+            'receipt': ReceiptSerializer(receipt).data
+        })
+    
+    @action(detail=True, methods=['post'], url_path='void-journal')
+    def void_journal_entry(self, request, pk=None):
+        """
+        Void a journal entry
+        作廢分錄
+        """
+        try:
+            receipt = Receipt.objects.get(pk=pk, uploaded_by=request.user)
+        except Receipt.DoesNotExist:
+            return Response({'error': 'Receipt not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not receipt.journal_entry:
+            return Response({
+                'status': 'error',
+                'error': 'No journal entry exists for this receipt'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        reason = request.data.get('reason', '')
+        
+        service = JournalEntryService(user=request.user)
+        success, error = service.void_journal_entry(receipt.journal_entry, request.user, reason)
+        
+        if not success:
+            return Response({
+                'status': 'error',
+                'error': error
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        receipt.refresh_from_db()
+        
+        return Response({
+            'status': 'voided',
+            'receipt': ReceiptSerializer(receipt).data
+        })
+    
+    # =========================================================================
+    # Anomaly Detection / 異常檢測
+    # =========================================================================
+    
+    @action(detail=True, methods=['get'], url_path='detect-anomalies')
+    def detect_anomalies(self, request, pk=None):
+        """
+        Detect anomalies in a receipt
+        檢測收據異常
+        """
+        try:
+            receipt = Receipt.objects.get(pk=pk, uploaded_by=request.user)
+        except Receipt.DoesNotExist:
+            return Response({'error': 'Receipt not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        anomalies = detect_receipt_anomalies(receipt, user=request.user)
+        
+        # Optional AI analysis
+        include_ai = request.query_params.get('include_ai', 'false').lower() == 'true'
+        ai_analysis = None
+        
+        if include_ai and anomalies:
+            service = AnomalyDetectionService(user=request.user)
+            ai_analysis = service.ai_analyze_anomalies(receipt, anomalies)
+        
+        return Response({
+            'receipt_id': str(receipt.id),
+            'anomalies_count': len(anomalies),
+            'anomalies': anomalies,
+            'ai_analysis': ai_analysis
+        })
+    
+    @action(detail=False, methods=['get'], url_path='anomaly-summary')
+    def get_anomaly_summary(self, request):
+        """
+        Get anomaly summary for user
+        獲取用戶異常摘要
+        """
+        days = int(request.query_params.get('days', 30))
+        summary = get_anomaly_summary(request.user, days)
+        
+        return Response(summary)
+    
+    # =========================================================================
+    # Vendor Recognition / 供應商辨識
+    # =========================================================================
+    
+    @action(detail=True, methods=['post'], url_path='process-vendor')
+    def process_vendor(self, request, pk=None):
+        """
+        Auto-process vendor from receipt
+        自動處理收據的供應商
+        """
+        try:
+            receipt = Receipt.objects.get(pk=pk, uploaded_by=request.user)
+        except Receipt.DoesNotExist:
+            return Response({'error': 'Receipt not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        result = process_vendor_auto(receipt)
+        
+        return Response({
+            'receipt_id': str(receipt.id),
+            'vendor_result': result
+        })
+    
+    @action(detail=False, methods=['post'], url_path='find-vendor')
+    def find_vendor(self, request):
+        """
+        Find matching vendor from database
+        從資料庫找尋配對供應商
+        """
+        vendor_name = request.data.get('vendor_name', '')
+        tax_id = request.data.get('tax_id', '')
+        
+        service = VendorRecognitionService(user=request.user)
+        
+        # Find exact match
+        contact = service.find_matching_contact(vendor_name, tax_id)
+        
+        if contact:
+            return Response({
+                'found': True,
+                'contact': {
+                    'id': str(contact.id),
+                    'company_name': contact.company_name,
+                    'contact_name': contact.contact_name,
+                    'tax_number': contact.tax_number,
+                    'contact_type': contact.contact_type
+                }
+            })
+        
+        # Get suggestions
+        suggestions = service.suggest_matching_contacts(vendor_name)
+        
+        return Response({
+            'found': False,
+            'suggestions': suggestions
+        })
+    
+    @action(detail=False, methods=['get'], url_path='suggest-category')
+    def suggest_category(self, request):
+        """
+        Suggest category based on vendor history
+        根據供應商歷史建議分類
+        """
+        vendor_name = request.query_params.get('vendor_name', '')
+        
+        if not vendor_name:
+            return Response({'error': 'vendor_name is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        category = suggest_vendor_category(vendor_name)
+        
+        service = VendorRecognitionService()
+        stats = service.get_vendor_statistics(vendor_name=vendor_name)
+        
+        return Response({
+            'vendor_name': vendor_name,
+            'suggested_category': category,
+            'vendor_stats': {
+                'total_transactions': stats.get('total_transactions', 0),
+                'total_amount': float(stats.get('total_amount', 0) or 0),
+                'category_breakdown': stats.get('category_breakdown', [])
+            }
+        })
+    
+    # =========================================================================
+    # Recurring Expenses / 重複費用
+    # =========================================================================
+    
+    @action(detail=False, methods=['get'], url_path='recurring-expenses')
+    def get_recurring_expenses(self, request):
+        """
+        Detect and list recurring expenses
+        檢測並列出重複費用
+        """
+        months = int(request.query_params.get('months', 12))
+        
+        recurring = detect_recurring(request.user, months)
+        
+        return Response({
+            'recurring_count': len(recurring),
+            'recurring_expenses': recurring,
+            'analysis_period_months': months
+        })
+    
+    @action(detail=False, methods=['get'], url_path='recurring-summary')
+    def get_recurring_summary(self, request):
+        """
+        Get recurring expense summary
+        獲取重複費用摘要
+        """
+        months = int(request.query_params.get('months', 12))
+        
+        summary = get_recurring_report(request.user, months)
+        
+        return Response(summary)
+    
+    @action(detail=False, methods=['get'], url_path='predict-expenses')
+    def predict_future_expenses(self, request):
+        """
+        Predict future expenses based on recurring patterns
+        根據重複模式預測未來費用
+        """
+        months_ahead = int(request.query_params.get('months', 3))
+        
+        predictions = predict_expenses(request.user, months_ahead)
+        
+        return Response(predictions)
+    
+    @action(detail=False, methods=['get'], url_path='recurring-analysis')
+    def ai_recurring_analysis(self, request):
+        """
+        AI analysis of recurring expenses
+        AI分析重複費用
+        """
+        months = int(request.query_params.get('months', 12))
+        
+        service = RecurringExpenseService(user=request.user)
+        analysis = service.ai_analyze_recurring(request.user, months)
+        
+        return Response(analysis)
     
     # =========================================================================
     # Excel Comparison / Excel 對比
