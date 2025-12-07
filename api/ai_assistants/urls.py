@@ -26,6 +26,7 @@ from ai_assistants.views.email_viewset import (
     EmailViewSet,
     EmailAccountViewSet,
     EmailTemplateViewSet,
+    EmailAttachmentViewSet,
 )
 from ai_assistants.views.brainstorm_viewset import (
     BrainstormSessionViewSet,
@@ -60,6 +61,7 @@ router.register(r'ai-service', AIServiceViewSet, basename='ai-service')
 router.register(r'email-assistant/accounts', EmailAccountViewSet, basename='email-account')
 router.register(r'email-assistant/emails', EmailViewSet, basename='email')
 router.register(r'email-assistant/templates', EmailTemplateViewSet, basename='email-template')
+router.register(r'email-assistant/attachments', EmailAttachmentViewSet, basename='email-attachment')
 
 # Planner Assistant Router  
 router.register(r'planner-assistant/tasks', PlannerTaskViewSet, basename='planner-task')

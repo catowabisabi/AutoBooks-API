@@ -136,3 +136,9 @@ class EmailAIReplySerializer(serializers.Serializer):
         default='professional'
     )
     key_points = serializers.ListField(child=serializers.CharField(), required=False)
+
+
+class EmailAttachmentUploadSerializer(serializers.Serializer):
+    """Serializer for uploading email attachments"""
+    email_id = serializers.UUIDField()
+    file = serializers.FileField()
