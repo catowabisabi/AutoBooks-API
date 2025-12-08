@@ -164,15 +164,15 @@ class ReportExporterService:
         data = report.cached_data or {}
         
         if report.report_type == ReportType.INCOME_STATEMENT.value:
-            row = self._excel_income_statement(ws, data, row, subheader_font, money_format, thin_border, header_fill)
+            row = self._excel_income_statement(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
         elif report.report_type == ReportType.BALANCE_SHEET.value:
-            row = self._excel_balance_sheet(ws, data, row, subheader_font, money_format, thin_border, header_fill)
+            row = self._excel_balance_sheet(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
         elif report.report_type == ReportType.GENERAL_LEDGER.value:
-            row = self._excel_general_ledger(ws, data, row, subheader_font, money_format, thin_border, header_fill)
+            row = self._excel_general_ledger(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
         elif report.report_type == ReportType.TRIAL_BALANCE.value:
-            row = self._excel_trial_balance(ws, data, row, subheader_font, money_format, thin_border, header_fill)
+            row = self._excel_trial_balance(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
         elif report.report_type == ReportType.EXPENSE_REPORT.value:
-            row = self._excel_expense_report(ws, data, row, subheader_font, money_format, thin_border, header_fill)
+            row = self._excel_expense_report(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
         
         # Auto-adjust column widths
         for col in range(1, ws.max_column + 1):
@@ -184,7 +184,7 @@ class ReportExporterService:
         content = output.getvalue()
         return content, len(content)
     
-    def _excel_income_statement(self, ws, data, row, subheader_font, money_format, border, header_fill):
+    def _excel_income_statement(self, ws, data, row, subheader_font, money_format, border, header_fill, Font):
         """Write income statement to Excel worksheet"""
         # Revenue section
         ws.cell(row=row, column=1, value='REVENUE').font = subheader_font
@@ -246,7 +246,7 @@ class ReportExporterService:
         
         return row + 2
     
-    def _excel_balance_sheet(self, ws, data, row, subheader_font, money_format, border, header_fill):
+    def _excel_balance_sheet(self, ws, data, row, subheader_font, money_format, border, header_fill, Font):
         """Write balance sheet to Excel worksheet"""
         # Assets
         ws.cell(row=row, column=1, value='ASSETS').font = subheader_font
@@ -319,7 +319,7 @@ class ReportExporterService:
         
         return row + 2
     
-    def _excel_general_ledger(self, ws, data, row, subheader_font, money_format, border, header_fill):
+    def _excel_general_ledger(self, ws, data, row, subheader_font, money_format, border, header_fill, Font):
         """Write general ledger to Excel worksheet"""
         for account in data.get('accounts', []):
             # Account header
@@ -373,7 +373,7 @@ class ReportExporterService:
         
         return row + 2
     
-    def _excel_trial_balance(self, ws, data, row, subheader_font, money_format, border, header_fill):
+    def _excel_trial_balance(self, ws, data, row, subheader_font, money_format, border, header_fill, Font):
         """Write trial balance to Excel worksheet"""
         # Headers
         headers = ['Account Code', 'Account Name', 'Debit', 'Credit']
@@ -411,7 +411,7 @@ class ReportExporterService:
         
         return row + 2
     
-    def _excel_expense_report(self, ws, data, row, subheader_font, money_format, border, header_fill):
+    def _excel_expense_report(self, ws, data, row, subheader_font, money_format, border, header_fill, Font):
         """Write expense report to Excel worksheet"""
         # Headers
         headers = ['Date', 'Description', 'Vendor', 'Category', 'Project', 'Amount']
