@@ -277,6 +277,15 @@ class JournalEntry(BaseModel):
     fiscal_year = models.ForeignKey(FiscalYear, on_delete=models.PROTECT, null=True)
     period = models.ForeignKey(AccountingPeriod, on_delete=models.PROTECT, null=True)
     
+    # Link to project
+    project = models.ForeignKey(
+        'Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='journal_entries'
+    )
+    
     status = models.CharField(max_length=20, choices=TransactionStatus.choices(), default=TransactionStatus.DRAFT.value)
     
     # Audit trail
@@ -401,6 +410,15 @@ class Invoice(BaseModel):
     invoice_type = models.CharField(max_length=20, choices=INVOICE_TYPE_CHOICES)
     invoice_number = models.CharField(max_length=50)  # unique per tenant
     contact = models.ForeignKey(Contact, on_delete=models.PROTECT, related_name='invoices')
+    
+    # Link to project
+    project = models.ForeignKey(
+        'Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoices'
+    )
     
     issue_date = models.DateField()
     due_date = models.DateField()
@@ -549,6 +567,15 @@ class Expense(BaseModel):
     expense_number = models.CharField(max_length=50)  # unique per tenant
     employee = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name='expenses')
     
+    # Link to project
+    project = models.ForeignKey(
+        'Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='expenses'
+    )
+    
     date = models.DateField()
     category = models.ForeignKey(Account, on_delete=models.PROTECT, related_name='expenses')  # Expense account
     
@@ -682,3 +709,171 @@ class APIKeyStore(BaseModel):
     
     def __str__(self):
         return f"{self.name} ({self.provider})"
+
+
+# =================================================================
+# Project Management for Accounting
+# =================================================================
+
+class ProjectStatus(str, Enum):
+    """Project status"""
+    ACTIVE = 'ACTIVE'
+    COMPLETED = 'COMPLETED'
+    ON_HOLD = 'ON_HOLD'
+    CANCELLED = 'CANCELLED'
+    ARCHIVED = 'ARCHIVED'
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class Project(BaseModel):
+    """會計專案 - Links accounting documents together"""
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='accounting_projects',
+        null=True,
+        blank=True
+    )
+    
+    # Basic Info
+    code = models.CharField(max_length=50)  # Unique per tenant, e.g., "PROJ-2024-001"
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    
+    # Status & Dates
+    status = models.CharField(
+        max_length=20, 
+        choices=ProjectStatus.choices(), 
+        default=ProjectStatus.ACTIVE.value
+    )
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    
+    # Budget Tracking
+    budget_amount = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2, 
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
+    currency = models.ForeignKey(
+        Currency, 
+        on_delete=models.PROTECT, 
+        null=True, 
+        blank=True,
+        related_name='projects'
+    )
+    
+    # Client/Contact (optional)
+    client = models.ForeignKey(
+        'Contact', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='projects'
+    )
+    
+    # Categorization
+    category = models.CharField(max_length=100, blank=True)  # e.g., "Audit", "Tax", "Consulting"
+    tags = models.JSONField(default=list, blank=True)  # ["urgent", "annual", "2024"]
+    
+    # Ownership
+    created_by = models.ForeignKey(
+        'users.User', 
+        on_delete=models.PROTECT, 
+        related_name='created_projects'
+    )
+    manager = models.ForeignKey(
+        'users.User', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='managed_projects'
+    )
+    
+    # Notes & Settings
+    notes = models.TextField(blank=True)
+    settings = models.JSONField(default=dict, blank=True)
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['tenant', 'code']
+        verbose_name = 'Accounting Project'
+        verbose_name_plural = 'Accounting Projects'
+    
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+    
+    @property
+    def total_expenses(self):
+        """Calculate total expenses linked to this project"""
+        return self.expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    @property
+    def total_invoiced(self):
+        """Calculate total invoiced amount for this project"""
+        return self.invoices.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+    
+    @property
+    def budget_remaining(self):
+        """Calculate remaining budget"""
+        return self.budget_amount - self.total_expenses
+    
+    @property
+    def budget_utilization_percent(self):
+        """Calculate budget utilization percentage"""
+        if self.budget_amount > 0:
+            return (self.total_expenses / self.budget_amount * 100).quantize(Decimal('0.01'))
+        return Decimal('0.00')
+
+
+class ProjectDocument(BaseModel):
+    """Link documents/files to projects"""
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='project_documents',
+        null=True,
+        blank=True
+    )
+    
+    project = models.ForeignKey(
+        Project, 
+        on_delete=models.CASCADE, 
+        related_name='documents'
+    )
+    
+    # Document Info
+    document_type = models.CharField(max_length=50)  # 'receipt', 'contract', 'report', 'other'
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    
+    # File Storage
+    file = models.FileField(upload_to='project_documents/', null=True, blank=True)
+    file_url = models.URLField(blank=True)  # External URL if not uploaded
+    file_name = models.CharField(max_length=255, blank=True)
+    file_size = models.PositiveIntegerField(default=0)  # in bytes
+    mime_type = models.CharField(max_length=100, blank=True)
+    
+    # Metadata
+    uploaded_by = models.ForeignKey(
+        'users.User', 
+        on_delete=models.PROTECT,
+        related_name='uploaded_project_documents'
+    )
+    tags = models.JSONField(default=list, blank=True)
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.project.code} - {self.title}"

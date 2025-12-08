@@ -3,7 +3,8 @@ from django.urls import path, include
 from .views import (
     FiscalYearViewSet, AccountingPeriodViewSet, CurrencyViewSet, TaxRateViewSet,
     AccountViewSet, JournalEntryViewSet, ContactViewSet, InvoiceViewSet,
-    PaymentViewSet, ExpenseViewSet, ReportViewSet
+    PaymentViewSet, ExpenseViewSet, ReportViewSet,
+    ProjectViewSet, ProjectDocumentViewSet
 )
 
 router = DefaultRouter()
@@ -18,5 +19,7 @@ router.register(r'accounting/invoices', InvoiceViewSet, basename='invoice')
 router.register(r'accounting/payments', PaymentViewSet, basename='payment')
 router.register(r'accounting/expenses', ExpenseViewSet, basename='expense')
 router.register(r'accounting/reports', ReportViewSet, basename='report')
+router.register(r'accounting/projects', ProjectViewSet, basename='project')
+router.register(r'accounting/project-documents', ProjectDocumentViewSet, basename='project-document')
 
 urlpatterns = router.urls

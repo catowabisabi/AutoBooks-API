@@ -19,7 +19,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from .models import (
     FiscalYear, AccountingPeriod, Currency, TaxRate, Account,
     JournalEntry, JournalEntryLine, Contact, Invoice, InvoiceLine,
-    Payment, PaymentAllocation, Expense, AccountType
+    Payment, PaymentAllocation, Expense, AccountType,
+    Project, ProjectDocument, ProjectStatus
 )
 from .serializers import (
     FiscalYearSerializer, AccountingPeriodSerializer, CurrencySerializer,
@@ -28,7 +29,9 @@ from .serializers import (
     ContactSerializer, ContactListSerializer,
     InvoiceSerializer, InvoiceListSerializer, InvoiceLineSerializer,
     PaymentSerializer, PaymentAllocationSerializer,
-    ExpenseSerializer, ExpenseListSerializer
+    ExpenseSerializer, ExpenseListSerializer,
+    ProjectSerializer, ProjectListSerializer, ProjectCreateSerializer,
+    ProjectUpdateSerializer, ProjectDocumentSerializer, LinkDocumentToProjectSerializer
 )
 
 
@@ -658,3 +661,278 @@ class ReportViewSet(viewsets.ViewSet):
             'over_90_days': float(aging['over_90']),
             'total': float(sum(aging.values()))
         })
+
+
+# =================================================================
+# Project Management ViewSet
+# =================================================================
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing accounting projects.
+    
+    Provides CRUD operations and additional actions for:
+    - Linking/unlinking expenses, invoices, journal entries
+    - Managing project documents
+    - Project statistics and summaries
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = Project.objects.all()
+        
+        # Filter by status
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        # Filter by category
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category__icontains=category)
+        
+        # Filter by client
+        client_id = self.request.query_params.get('client')
+        if client_id:
+            queryset = queryset.filter(client_id=client_id)
+        
+        # Filter by manager
+        manager_id = self.request.query_params.get('manager')
+        if manager_id:
+            queryset = queryset.filter(manager_id=manager_id)
+        
+        # Filter by date range
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            queryset = queryset.filter(start_date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(end_date__lte=end_date)
+        
+        # Filter by active status
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        
+        # Search by name or code
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) | 
+                Q(code__icontains=search) |
+                Q(description__icontains=search)
+            )
+        
+        return queryset.select_related('created_by', 'manager', 'client', 'currency')
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProjectListSerializer
+        elif self.action == 'create':
+            return ProjectCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return ProjectUpdateSerializer
+        elif self.action == 'link_documents':
+            return LinkDocumentToProjectSerializer
+        return ProjectSerializer
+    
+    def perform_create(self, serializer):
+        """Set created_by and tenant on create"""
+        serializer.save(
+            created_by=self.request.user,
+            tenant=getattr(self.request, 'tenant', None)
+        )
+    
+    @action(detail=True, methods=['get'])
+    def summary(self, request, pk=None):
+        """Get project summary with all linked documents"""
+        project = self.get_object()
+        
+        # Get linked expenses
+        expenses = Expense.objects.filter(project=project).values(
+            'id', 'expense_number', 'date', 'description', 'amount', 'status'
+        )
+        
+        # Get linked invoices
+        invoices = Invoice.objects.filter(project=project).values(
+            'id', 'invoice_number', 'invoice_type', 'issue_date', 'total', 'status'
+        )
+        
+        # Get linked journal entries
+        journal_entries = JournalEntry.objects.filter(project=project).values(
+            'id', 'entry_number', 'date', 'description', 'status', 'total_debit'
+        )
+        
+        # Get project documents
+        documents = ProjectDocument.objects.filter(project=project).values(
+            'id', 'document_type', 'title', 'file_name', 'created_at'
+        )
+        
+        return Response({
+            'project': ProjectSerializer(project).data,
+            'expenses': list(expenses),
+            'invoices': list(invoices),
+            'journal_entries': list(journal_entries),
+            'documents': list(documents),
+            'totals': {
+                'expense_count': len(expenses),
+                'invoice_count': len(invoices),
+                'journal_entry_count': len(journal_entries),
+                'document_count': len(documents),
+                'total_expenses': float(project.total_expenses),
+                'total_invoiced': float(project.total_invoiced),
+                'budget_remaining': float(project.budget_remaining),
+                'budget_utilization': float(project.budget_utilization_percent)
+            }
+        })
+    
+    @action(detail=True, methods=['post'])
+    def link_documents(self, request, pk=None):
+        """Link expenses, invoices, or journal entries to this project"""
+        project = self.get_object()
+        serializer = LinkDocumentToProjectSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        document_type = serializer.validated_data['document_type']
+        document_ids = serializer.validated_data['document_ids']
+        
+        # Update documents to link to this project
+        if document_type == 'expense':
+            updated = Expense.objects.filter(id__in=document_ids).update(project=project)
+        elif document_type == 'invoice':
+            updated = Invoice.objects.filter(id__in=document_ids).update(project=project)
+        elif document_type == 'journal_entry':
+            updated = JournalEntry.objects.filter(id__in=document_ids).update(project=project)
+        
+        return Response({
+            'message': f'Successfully linked {updated} {document_type}(s) to project',
+            'linked_count': updated
+        })
+    
+    @action(detail=True, methods=['post'])
+    def unlink_documents(self, request, pk=None):
+        """Unlink expenses, invoices, or journal entries from this project"""
+        project = self.get_object()
+        serializer = LinkDocumentToProjectSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        document_type = serializer.validated_data['document_type']
+        document_ids = serializer.validated_data['document_ids']
+        
+        # Update documents to remove project link
+        if document_type == 'expense':
+            updated = Expense.objects.filter(id__in=document_ids, project=project).update(project=None)
+        elif document_type == 'invoice':
+            updated = Invoice.objects.filter(id__in=document_ids, project=project).update(project=None)
+        elif document_type == 'journal_entry':
+            updated = JournalEntry.objects.filter(id__in=document_ids, project=project).update(project=None)
+        
+        return Response({
+            'message': f'Successfully unlinked {updated} {document_type}(s) from project',
+            'unlinked_count': updated
+        })
+    
+    @action(detail=True, methods=['get'])
+    def expenses(self, request, pk=None):
+        """Get all expenses linked to this project"""
+        project = self.get_object()
+        expenses = Expense.objects.filter(project=project)
+        
+        # Pagination
+        page = self.paginate_queryset(expenses)
+        if page is not None:
+            serializer = ExpenseListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = ExpenseListSerializer(expenses, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def invoices(self, request, pk=None):
+        """Get all invoices linked to this project"""
+        project = self.get_object()
+        invoices = Invoice.objects.filter(project=project)
+        
+        # Pagination
+        page = self.paginate_queryset(invoices)
+        if page is not None:
+            serializer = InvoiceListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = InvoiceListSerializer(invoices, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def journal_entries(self, request, pk=None):
+        """Get all journal entries linked to this project"""
+        project = self.get_object()
+        entries = JournalEntry.objects.filter(project=project)
+        
+        # Pagination
+        page = self.paginate_queryset(entries)
+        if page is not None:
+            serializer = JournalEntrySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = JournalEntrySerializer(entries, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Get overall project statistics"""
+        projects = self.get_queryset()
+        
+        total_count = projects.count()
+        active_count = projects.filter(status=ProjectStatus.ACTIVE.value).count()
+        completed_count = projects.filter(status=ProjectStatus.COMPLETED.value).count()
+        on_hold_count = projects.filter(status=ProjectStatus.ON_HOLD.value).count()
+        
+        total_budget = projects.aggregate(total=Sum('budget_amount'))['total'] or Decimal('0')
+        
+        return Response({
+            'total_projects': total_count,
+            'by_status': {
+                'active': active_count,
+                'completed': completed_count,
+                'on_hold': on_hold_count,
+                'cancelled': projects.filter(status=ProjectStatus.CANCELLED.value).count(),
+                'archived': projects.filter(status=ProjectStatus.ARCHIVED.value).count()
+            },
+            'total_budget': float(total_budget)
+        })
+    
+    @action(detail=False, methods=['get'])
+    def categories(self, request):
+        """Get list of unique project categories"""
+        categories = Project.objects.values_list('category', flat=True).distinct()
+        return Response({
+            'categories': [c for c in categories if c]
+        })
+
+
+class ProjectDocumentViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing project documents"""
+    serializer_class = ProjectDocumentSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = ProjectDocument.objects.all()
+        
+        # Filter by project
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        
+        # Filter by document type
+        doc_type = self.request.query_params.get('document_type')
+        if doc_type:
+            queryset = queryset.filter(document_type=doc_type)
+        
+        return queryset.select_related('project', 'uploaded_by')
+    
+    def perform_create(self, serializer):
+        """Set uploaded_by and tenant on create"""
+        serializer.save(
+            uploaded_by=self.request.user,
+            tenant=getattr(self.request, 'tenant', None)
+        )
