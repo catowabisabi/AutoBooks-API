@@ -145,7 +145,7 @@ def reverse_seed(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0002_user_avatar_url_user_language_user_phone_and_more'),
+        ('users', '0004_create_subscription_models'),
     ]
 
     operations = [

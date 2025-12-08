@@ -54,7 +54,7 @@ class SubscriptionMiddleware(MiddlewareMixin):
         
         # Audit logs
         '/api/v1/audit-logs/': 'has_audit_logs',
-    ]
+    }
     
     def process_request(self, request):
         """Add subscription info to request and check feature access"""

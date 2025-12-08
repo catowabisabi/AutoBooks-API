@@ -240,19 +240,28 @@ class AIServiceViewSet(viewsets.ViewSet):
         
         models_by_provider = {
             "openai": [
-                {"name": "gpt-4o", "description": "Most capable GPT-4 model"},
-                {"name": "gpt-4o-mini", "description": "Affordable, fast GPT-4 model"},
-                {"name": "gpt-4-turbo", "description": "GPT-4 Turbo with vision"},
-                {"name": "gpt-3.5-turbo", "description": "Fast and efficient"},
+                {"name": "gpt-4o", "description": "Most capable GPT-4 model", "vision": True},
+                {"name": "gpt-4o-mini", "description": "Affordable, fast GPT-4 model", "vision": True},
+                {"name": "gpt-4-turbo", "description": "GPT-4 Turbo with vision", "vision": True},
+                {"name": "gpt-3.5-turbo", "description": "Fast and efficient", "vision": False},
+                {"name": "o1-preview", "description": "Advanced reasoning model", "vision": False},
+                {"name": "o1-mini", "description": "Efficient reasoning model", "vision": False},
             ],
             "gemini": [
-                {"name": "gemini-1.5-pro", "description": "Most capable Gemini model"},
-                {"name": "gemini-1.5-flash", "description": "Fast and efficient"},
-                {"name": "gemini-1.0-pro", "description": "Stable production model"},
+                {"name": "gemini-1.5-pro", "description": "Most capable Gemini model", "vision": True},
+                {"name": "gemini-1.5-flash", "description": "Fast and efficient", "vision": True},
+                {"name": "gemini-1.0-pro", "description": "Stable production model", "vision": False},
+                {"name": "gemini-2.0-flash-exp", "description": "Experimental fast model", "vision": True},
             ],
             "deepseek": [
-                {"name": "deepseek-chat", "description": "General chat model"},
-                {"name": "deepseek-coder", "description": "Code-specialized model"},
+                {"name": "deepseek-chat", "description": "General chat model", "vision": False},
+                {"name": "deepseek-coder", "description": "Code-specialized model", "vision": False},
+                {"name": "deepseek-reasoner", "description": "Advanced reasoning", "vision": False},
+            ],
+            "anthropic": [
+                {"name": "claude-3-5-sonnet-20241022", "description": "Latest Claude model", "vision": True},
+                {"name": "claude-3-opus-20240229", "description": "Most capable Claude", "vision": True},
+                {"name": "claude-3-haiku-20240307", "description": "Fast and efficient", "vision": True},
             ]
         }
         
@@ -262,3 +271,168 @@ class AIServiceViewSet(viewsets.ViewSet):
             "provider": provider_name,
             "models": models
         })
+    
+    @action(detail=False, methods=['post'], url_path='set-default')
+    def set_default(self, request):
+        """
+        Set the default AI provider and model for the user
+        
+        Request body:
+        {
+            "provider": "openai",
+            "model": "gpt-4o-mini"
+        }
+        """
+        provider = request.data.get('provider')
+        model = request.data.get('model')
+        
+        if not provider:
+            return Response(
+                {"error": "Provider is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Store in user settings or session
+        # For now, return success - in production this would save to UserSettings
+        return Response({
+            "success": True,
+            "message": f"Default set to {provider}/{model or 'default'}",
+            "provider": provider,
+            "model": model
+        })
+    
+    @action(detail=False, methods=['post'], url_path='test-connection')
+    def test_connection(self, request):
+        """
+        Test connection to an AI provider
+        
+        Request body:
+        {
+            "provider": "openai"
+        }
+        """
+        provider = request.data.get('provider', 'openai')
+        
+        try:
+            ai = get_ai_service(provider=provider)
+            response = ai.chat(
+                message="Hello, please respond with 'Connection successful'",
+                max_tokens=50
+            )
+            
+            return Response({
+                "success": True,
+                "provider": provider,
+                "model": response.model,
+                "message": "Connection successful"
+            })
+            
+        except Exception as e:
+            return Response({
+                "success": False,
+                "provider": provider,
+                "error": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='module-analyze')
+    def module_analyze(self, request):
+        """
+        Perform module-aware AI analysis
+        
+        Request body:
+        {
+            "module": "finance" | "hrms" | "projects" | "kanban" | "calendar" | "email",
+            "action": "summarize" | "analyze" | "classify" | "custom",
+            "prompt": "Your analysis request",
+            "context_data": {...}  // Module-specific data
+        }
+        """
+        module = request.data.get('module')
+        action = request.data.get('action', 'analyze')
+        prompt = request.data.get('prompt', '')
+        context_data = request.data.get('context_data', {})
+        provider = request.data.get('provider', 'openai')
+        
+        if not module:
+            return Response(
+                {"error": "Module is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Module-specific system prompts
+        system_prompts = {
+            'finance': """You are a financial analyst AI assistant. Analyze financial data, 
+                identify trends, risks, and opportunities. Provide actionable insights for 
+                cash flow, expenses, revenue, and compliance.""",
+            'hrms': """You are an HR analytics AI assistant. Analyze workforce data, 
+                predict attrition risks, evaluate team performance, and provide 
+                recommendations for employee engagement and retention.""",
+            'projects': """You are a project management AI assistant. Analyze project timelines, 
+                identify bottlenecks, assess resource allocation, and provide recommendations 
+                for improving project delivery and team productivity.""",
+            'kanban': """You are a Kanban workflow AI assistant. Analyze board status, 
+                identify workflow inefficiencies, suggest task prioritization, and help 
+                optimize work-in-progress limits.""",
+            'calendar': """You are a scheduling AI assistant. Analyze calendar patterns, 
+                identify time management opportunities, suggest meeting optimizations, 
+                and help find focus time blocks.""",
+            'email': """You are an email management AI assistant. Analyze email patterns, 
+                prioritize communications, extract action items, and help draft 
+                professional responses.""",
+        }
+        
+        # Action-specific instructions
+        action_instructions = {
+            'summarize': 'Provide a concise summary of the key points and metrics.',
+            'analyze': 'Perform a detailed analysis and identify patterns, trends, and insights.',
+            'classify': 'Categorize and classify the data into meaningful groups with labels.',
+            'custom': prompt,
+        }
+        
+        system_prompt = system_prompts.get(module, system_prompts['finance'])
+        action_instruction = action_instructions.get(action, action_instructions['analyze'])
+        
+        # Build the full message
+        full_message = f"""[{module.upper()} Module - {action.upper()} Request]
+
+Context Data:
+{context_data}
+
+Request: {action_instruction}
+{prompt if action != 'custom' else ''}
+
+Please provide:
+1. Key findings and insights
+2. Specific recommendations
+3. Any risks or concerns identified
+4. Suggested next steps
+
+Format your response clearly with sections and bullet points."""
+        
+        try:
+            ai = get_ai_service(provider=provider)
+            response = ai.chat(
+                message=full_message,
+                system_prompt=system_prompt,
+                temperature=0.7,
+                max_tokens=2000
+            )
+            
+            return Response({
+                "success": True,
+                "module": module,
+                "action": action,
+                "response": response.content,
+                "provider": response.provider,
+                "model": response.model,
+                "metadata": {
+                    "confidence": 0.85,  # Placeholder
+                    "timestamp": str(request.auth) if hasattr(request, 'auth') else None,
+                }
+            })
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import UserViewSet, UserSettingsViewSet, SubscriptionPlanViewSet, UserSubscriptionViewSet
+from .views import UserViewSet, UserSettingsViewSet, SubscriptionPlanViewSet, UserSubscriptionViewSet, AdminSubscriptionViewSet
 from .oauth_views import GoogleOAuthView, GoogleOAuthCallbackView
 from .auth_views import (
     SignUpView,
@@ -18,6 +18,7 @@ router.register(r'users', UserViewSet, basename='user')
 router.register(r'user-settings', UserSettingsViewSet, basename='user-settings')
 router.register(r'subscription-plans', SubscriptionPlanViewSet, basename='subscription-plan')
 router.register(r'my-subscription', UserSubscriptionViewSet, basename='my-subscription')
+router.register(r'admin/subscriptions', AdminSubscriptionViewSet, basename='admin-subscription')
 
 urlpatterns = [
     # OAuth

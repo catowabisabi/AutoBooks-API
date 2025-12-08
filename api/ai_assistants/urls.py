@@ -52,6 +52,14 @@ from ai_assistants.views.project_viewset import (
     AccountingProjectViewSet,
     UnrecognizedReceiptsViewSet,
 )
+from ai_assistants.views.feedback_viewset import (
+    AIFeedbackViewSet,
+    AIResultLogViewSet,
+)
+from ai_assistants.views.task_viewset import (
+    AsyncTaskViewSet,
+    TaskProgressView,
+)
 
 # Router for viewsets
 router = DefaultRouter()
@@ -80,6 +88,13 @@ router.register(r'brainstorm-assistant/ideas', BrainstormIdeaViewSet, basename='
 router.register(r'brainstorm-assistant/meetings', BrainstormMeetingViewSet, basename='brainstorm-meeting')
 router.register(r'brainstorm-assistant/participants', BrainstormMeetingParticipantViewSet, basename='brainstorm-participant')
 
+# AI Feedback & Results Router
+router.register(r'ai-feedback', AIFeedbackViewSet, basename='ai-feedback')
+router.register(r'ai-results', AIResultLogViewSet, basename='ai-result')
+
+# Async Tasks Router
+router.register(r'tasks', AsyncTaskViewSet, basename='async-task')
+
 urlpatterns = [
     # AI Service (unified AI API)
     path("ai-service/chat/", AIServiceViewSet.as_view({"post": "chat"}), name="ai-service-chat"),
@@ -87,6 +102,7 @@ urlpatterns = [
     path("ai-service/analyze-image/", AIServiceViewSet.as_view({"post": "analyze_image"}), name="ai-service-analyze-image"),
     path("ai-service/providers/", AIServiceViewSet.as_view({"get": "providers"}), name="ai-service-providers"),
     path("ai-service/models/", AIServiceViewSet.as_view({"get": "models"}), name="ai-service-models"),
+    path("ai-service/module-analyze/", AIServiceViewSet.as_view({"post": "module_analyze"}), name="ai-service-module-analyze"),
     
     # Analyst Assistant
     path("analyst-assistant/start/", AnalystStartDatasetLoadView.as_view(), name="analyst-assistant-start"),
@@ -109,6 +125,12 @@ urlpatterns = [
     # Finance Assistant
     path("finance-assistant/analyze/", ReceiptAnalyzerViewSet.as_view({"post": "analyze_receipt"}),
          name="finance-assistant-analyze"),
+    path("finance-assistant/analyze-report/", ReceiptAnalyzerViewSet.as_view({"post": "analyze_report"}),
+         name="finance-assistant-analyze-report"),
+    path("finance-assistant/compare-periods/", ReceiptAnalyzerViewSet.as_view({"post": "compare_periods"}),
+         name="finance-assistant-compare-periods"),
+    path("finance-assistant/forecast/", ReceiptAnalyzerViewSet.as_view({"post": "forecast"}),
+         name="finance-assistant-forecast"),
     
     # Accounting Assistant / 會計助手
     path("accounting-assistant/upload/", 

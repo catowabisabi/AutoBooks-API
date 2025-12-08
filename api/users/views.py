@@ -45,6 +45,68 @@ class UserViewSet(viewsets.ModelViewSet):
         else:
             self.permission_classes = [IsAuthenticated]
         return [permission() for permission in self.permission_classes]
+    
+    def list(self, request):
+        """List all users with filtering and pagination"""
+        queryset = self.get_queryset()
+        
+        # Filter by role
+        role = request.query_params.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+        
+        # Filter by active status
+        is_active = request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        
+        # Search by email or name
+        search = request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(email__icontains=search) | Q(full_name__icontains=search)
+            )
+        
+        # Order by
+        ordering = request.query_params.get('ordering', '-created_at')
+        queryset = queryset.order_by(ordering)
+        
+        # Pagination
+        page_size = int(request.query_params.get('page_size', 20))
+        page = int(request.query_params.get('page', 1))
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        total = queryset.count()
+        users = queryset[start:end]
+        
+        serializer = UserSerializer(users, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'pagination': {
+                'total': total,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total + page_size - 1) // page_size
+            }
+        })
+    
+    def retrieve(self, request, pk=None):
+        """Get user details by ID"""
+        try:
+            user = self.get_queryset().get(pk=pk)
+            serializer = UserProfileSerializer(user)
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=['post'])
     def register(self, request):
@@ -94,6 +156,30 @@ class UserViewSet(viewsets.ModelViewSet):
             'success': False,
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'], url_path='stats')
+    def stats(self, request):
+        """Get user statistics (admin only)"""
+        if not request.user.role == 'ADMIN':
+            return Response({
+                'success': False,
+                'error': 'Admin access required'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        total = User.objects.count()
+        active = User.objects.filter(is_active=True).count()
+        admins = User.objects.filter(role='ADMIN').count()
+        
+        return Response({
+            'success': True,
+            'data': {
+                'total': total,
+                'active': active,
+                'inactive': total - active,
+                'admins': admins,
+                'users': total - admins
+            }
+        })
 
 
 class UserSettingsViewSet(viewsets.ViewSet):
@@ -292,3 +378,238 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 'success': False,
                 'error': 'No active subscription found'
             }, status=status.HTTP_404_NOT_FOUND)
+
+
+class AdminSubscriptionViewSet(viewsets.ModelViewSet):
+    """Admin ViewSet for managing all user subscriptions"""
+    queryset = UserSubscription.objects.select_related('user', 'plan').order_by('-created_at')
+    serializer_class = UserSubscriptionSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def list(self, request):
+        """List all subscriptions with filtering"""
+        queryset = self.get_queryset()
+        
+        # Filter by status
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filter by plan type
+        plan_type = request.query_params.get('plan_type')
+        if plan_type:
+            queryset = queryset.filter(plan__plan_type=plan_type)
+        
+        # Search by user email
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(user__email__icontains=search)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'count': queryset.count()
+        })
+    
+    def retrieve(self, request, pk=None):
+        """Get a specific subscription"""
+        try:
+            subscription = self.get_queryset().get(pk=pk)
+            serializer = self.get_serializer(subscription)
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
+        except UserSubscription.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Subscription not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['post'], url_path='change-plan')
+    def change_plan(self, request, pk=None):
+        """Admin: Change user's subscription plan"""
+        try:
+            subscription = self.get_queryset().get(pk=pk)
+        except UserSubscription.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Subscription not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        plan_id = request.data.get('plan_id')
+        if not plan_id:
+            return Response({
+                'success': False,
+                'error': 'plan_id is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            new_plan = SubscriptionPlan.objects.get(pk=plan_id, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Plan not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        subscription.plan = new_plan
+        subscription.save()
+        
+        serializer = self.get_serializer(subscription)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': f'Subscription changed to {new_plan.name}'
+        })
+    
+    @action(detail=True, methods=['post'], url_path='change-status')
+    def change_status(self, request, pk=None):
+        """Admin: Change subscription status"""
+        try:
+            subscription = self.get_queryset().get(pk=pk)
+        except UserSubscription.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Subscription not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        new_status = request.data.get('status')
+        valid_statuses = [choice[0] for choice in UserSubscription.Status.choices]
+        
+        if new_status not in valid_statuses:
+            return Response({
+                'success': False,
+                'error': f'Invalid status. Must be one of: {valid_statuses}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        subscription.status = new_status
+        if new_status == 'cancelled':
+            subscription.cancelled_at = timezone.now()
+        subscription.save()
+        
+        serializer = self.get_serializer(subscription)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': f'Subscription status changed to {new_status}'
+        })
+    
+    @action(detail=True, methods=['post'], url_path='extend')
+    def extend(self, request, pk=None):
+        """Admin: Extend subscription end date"""
+        try:
+            subscription = self.get_queryset().get(pk=pk)
+        except UserSubscription.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Subscription not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        days = request.data.get('days', 30)
+        try:
+            days = int(days)
+        except ValueError:
+            return Response({
+                'success': False,
+                'error': 'days must be a number'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if subscription.end_date:
+            subscription.end_date = subscription.end_date + timedelta(days=days)
+        else:
+            subscription.end_date = timezone.now().date() + timedelta(days=days)
+        
+        if subscription.next_billing_date:
+            subscription.next_billing_date = subscription.next_billing_date + timedelta(days=days)
+        
+        subscription.save()
+        
+        serializer = self.get_serializer(subscription)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': f'Subscription extended by {days} days'
+        })
+    
+    @action(detail=False, methods=['post'], url_path='create-for-user')
+    def create_for_user(self, request):
+        """Admin: Create subscription for a user"""
+        user_id = request.data.get('user_id')
+        plan_id = request.data.get('plan_id')
+        billing_cycle = request.data.get('billing_cycle', 'monthly')
+        status_value = request.data.get('status', 'active')
+        
+        if not user_id or not plan_id:
+            return Response({
+                'success': False,
+                'error': 'user_id and plan_id are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            plan = SubscriptionPlan.objects.get(pk=plan_id, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Plan not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if user already has subscription
+        if UserSubscription.objects.filter(user=user).exists():
+            return Response({
+                'success': False,
+                'error': 'User already has a subscription. Use change-plan instead.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        today = timezone.now().date()
+        subscription = UserSubscription.objects.create(
+            user=user,
+            plan=plan,
+            status=status_value,
+            billing_cycle=billing_cycle,
+            start_date=today,
+            next_billing_date=today + timedelta(days=30 if billing_cycle == 'monthly' else 365),
+        )
+        
+        serializer = self.get_serializer(subscription)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': f'Subscription created for {user.email}'
+        }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['get'], url_path='stats')
+    def stats(self, request):
+        """Admin: Get subscription statistics"""
+        total = UserSubscription.objects.count()
+        active = UserSubscription.objects.filter(status='active').count()
+        trial = UserSubscription.objects.filter(status='trial').count()
+        cancelled = UserSubscription.objects.filter(status='cancelled').count()
+        expired = UserSubscription.objects.filter(status='expired').count()
+        
+        # By plan type
+        by_plan = {}
+        for plan in SubscriptionPlan.objects.filter(is_active=True):
+            by_plan[plan.plan_type] = UserSubscription.objects.filter(plan=plan).count()
+        
+        return Response({
+            'success': True,
+            'data': {
+                'total': total,
+                'by_status': {
+                    'active': active,
+                    'trial': trial,
+                    'cancelled': cancelled,
+                    'expired': expired,
+                },
+                'by_plan': by_plan,
+            }
+        })

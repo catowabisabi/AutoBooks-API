@@ -1,0 +1,697 @@
+{
+  "info": {
+    "_postman_id": "wisematic-erp-api-collection",
+    "name": "Wisematic ERP API",
+    "description": "Complete API collection for Wisematic ERP system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login (Get Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.access);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/token/"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/token/refresh/"
+          }
+        },
+        {
+          "name": "Register User",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"newuser@example.com\",\n    \"full_name\": \"New User\",\n    \"password\": \"password123\",\n    \"password2\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/register/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users/me/"
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/?page=1&page_size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "role", "value": "", "disabled": true },
+                { "key": "is_active", "value": "true", "disabled": true },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}/"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"full_name\": \"Updated Name\",\n    \"phone\": \"+1234567890\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/profile/"
+          }
+        },
+        {
+          "name": "Get User Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users/stats/"
+          }
+        },
+        {
+          "name": "Get User Settings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/user-settings/"
+          }
+        },
+        {
+          "name": "Update Notification Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email_notifications\": true,\n    \"push_notifications\": false\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/user-settings/notifications/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Service",
+      "item": [
+        {
+          "name": "Chat",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"message\": \"Hello, how can you help me?\",\n    \"provider\": \"openai\",\n    \"model\": \"gpt-4o-mini\",\n    \"temperature\": 0.7\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/ai-service/chat/"
+          }
+        },
+        {
+          "name": "Chat with History",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"messages\": [\n        {\"role\": \"user\", \"content\": \"Hello\"},\n        {\"role\": \"assistant\", \"content\": \"Hi there!\"},\n        {\"role\": \"user\", \"content\": \"What is ERP?\"}\n    ],\n    \"provider\": \"openai\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/ai-service/chat-with-history/"
+          }
+        },
+        {
+          "name": "Analyze Image",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "image", "type": "file", "src": "" },
+                { "key": "prompt", "value": "Describe this image", "type": "text" },
+                { "key": "provider", "value": "gemini", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/ai-service/analyze-image/"
+          }
+        },
+        {
+          "name": "Get Providers",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/ai-service/providers/"
+          }
+        },
+        {
+          "name": "Get Models",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ai-service/models/?provider=openai",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ai-service", "models", ""],
+              "query": [{ "key": "provider", "value": "openai" }]
+            }
+          }
+        },
+        {
+          "name": "Set Default Provider",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"provider\": \"openai\",\n    \"model\": \"gpt-4o-mini\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/ai-service/set-default/"
+          }
+        },
+        {
+          "name": "Test Connection",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"provider\": \"openai\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/ai-service/test-connection/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Planner Assistant",
+      "item": [
+        {
+          "name": "Start Dataset Load",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/planner-assistant/start/"
+          }
+        },
+        {
+          "name": "Get Planner Data",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/planner-assistant/data/"
+          }
+        },
+        {
+          "name": "Query Planner",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"What tasks are due this week?\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/planner-assistant/query/"
+          }
+        },
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/planner-assistant/tasks/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "planner-assistant", "tasks", ""],
+              "query": [
+                { "key": "status", "value": "TODO", "disabled": true },
+                { "key": "priority", "value": "HIGH", "disabled": true },
+                { "key": "overdue", "value": "true", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"New Task\",\n    \"description\": \"Task description\",\n    \"priority\": \"HIGH\",\n    \"due_date\": \"2025-12-15\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/planner-assistant/tasks/"
+          }
+        },
+        {
+          "name": "AI Create Tasks",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"input_text\": \"I need to prepare Q4 financial report by Friday, schedule a meeting with the team on Monday, and review the budget proposal\",\n    \"auto_prioritize\": true,\n    \"auto_schedule\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/planner-assistant/tasks/ai_create/"
+          }
+        },
+        {
+          "name": "Complete Task",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/planner-assistant/tasks/{{taskId}}/complete/"
+          }
+        },
+        {
+          "name": "List Events",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/planner-assistant/events/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Assistant",
+      "item": [
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/document-assistant/upload/"
+          }
+        },
+        {
+          "name": "Get Document Info",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/document-assistant/{{documentId}}/info/"
+          }
+        },
+        {
+          "name": "Query Document",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"document_id\": \"{{documentId}}\",\n    \"query\": \"What is the total amount?\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/document-assistant/query/"
+          }
+        },
+        {
+          "name": "Process Document (Upload + Query)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" },
+                { "key": "query", "value": "Summarize this document", "type": "text" },
+                { "key": "return_document_data", "value": "false", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/document-assistant/process/"
+          }
+        },
+        {
+          "name": "List Documents",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/document-assistant/documents/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Finance Assistant",
+      "item": [
+        {
+          "name": "Analyze Receipt",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" },
+                { "key": "category", "value": "[]", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/finance-assistant/analyze/"
+          }
+        },
+        {
+          "name": "Analyze Financial Report",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"report_type\": \"income_statement\",\n    \"report_data\": {\n        \"revenue\": 1000000,\n        \"expenses\": 750000,\n        \"net_income\": 250000\n    },\n    \"questions\": [\"What are the key insights?\"],\n    \"period\": \"2024-Q4\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/finance-assistant/analyze-report/"
+          }
+        },
+        {
+          "name": "Compare Periods",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"report_type\": \"income_statement\",\n    \"periods\": [\n        {\"period\": \"2024-Q3\", \"data\": {\"revenue\": 900000}},\n        {\"period\": \"2024-Q4\", \"data\": {\"revenue\": 1000000}}\n    ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/finance-assistant/compare-periods/"
+          }
+        },
+        {
+          "name": "Forecast",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"historical_data\": [\n        {\"period\": \"Q1\", \"value\": 100000},\n        {\"period\": \"Q2\", \"value\": 120000},\n        {\"period\": \"Q3\", \"value\": 115000},\n        {\"period\": \"Q4\", \"value\": 140000}\n    ],\n    \"forecast_periods\": 4,\n    \"metric\": \"revenue\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/finance-assistant/forecast/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics & Dashboards",
+      "item": [
+        {
+          "name": "Get Overview",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/overview/"
+          }
+        },
+        {
+          "name": "List Dashboards",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/dashboards/"
+          }
+        },
+        {
+          "name": "Get Default Dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/dashboards/default/"
+          }
+        },
+        {
+          "name": "Create Dashboard",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"My Dashboard\",\n    \"description\": \"Custom dashboard\",\n    \"is_default\": false\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/analytics/dashboards/"
+          }
+        },
+        {
+          "name": "List Charts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/charts/"
+          }
+        },
+        {
+          "name": "Create Chart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Revenue Chart\",\n    \"type\": \"LINE\",\n    \"config\": {\n        \"labels\": [\"Jan\", \"Feb\", \"Mar\"],\n        \"datasets\": [{\"data\": [100, 200, 150]}]\n    },\n    \"position\": 1,\n    \"width\": 6,\n    \"height\": 4\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/analytics/charts/"
+          }
+        },
+        {
+          "name": "List KPIs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/kpis/"
+          }
+        },
+        {
+          "name": "KPIs by Category",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/kpis/by_category/"
+          }
+        },
+        {
+          "name": "Update KPI Value",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"value\": 150000\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/analytics/kpis/{{kpiId}}/update_value/"
+          }
+        },
+        {
+          "name": "Sales Yearly Summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/analytics/sales/yearly_summary/?year=2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "analytics", "sales", "yearly_summary", ""],
+              "query": [{ "key": "year", "value": "2024" }]
+            }
+          }
+        },
+        {
+          "name": "Sales Trends",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/analytics/sales/trends/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscription",
+      "item": [
+        {
+          "name": "List Plans",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/subscription-plans/"
+          }
+        },
+        {
+          "name": "Get My Subscription",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/my-subscription/"
+          }
+        },
+        {
+          "name": "Subscribe to Plan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"plan_id\": \"{{planId}}\",\n    \"billing_cycle\": \"monthly\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/my-subscription/subscribe/"
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/my-subscription/cancel/"
+          }
+        },
+        {
+          "name": "[Admin] List All Subscriptions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/subscriptions/"
+          }
+        },
+        {
+          "name": "[Admin] Get Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/subscriptions/stats/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RAG Knowledge Base",
+      "item": [
+        {
+          "name": "Query Knowledge Base",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"query\": \"How do I create a journal entry?\",\n    \"top_k\": 5\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/rag/query/"
+          }
+        },
+        {
+          "name": "RAG Chat",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"message\": \"Explain the accounting cycle\",\n    \"history\": []\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/rag/chat/"
+          }
+        },
+        {
+          "name": "List Knowledge Documents",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/rag/knowledge/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Visualization",
+      "item": [
+        {
+          "name": "Get Chart Types",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/visualization/chart-types/"
+          }
+        },
+        {
+          "name": "Analyze Data",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": [\n        {\"month\": \"Jan\", \"sales\": 100},\n        {\"month\": \"Feb\", \"sales\": 150}\n    ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/visualization/analyze/"
+          }
+        },
+        {
+          "name": "Generate Chart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"bar\",\n    \"data\": {\n        \"labels\": [\"Jan\", \"Feb\", \"Mar\"],\n        \"datasets\": [{\"label\": \"Sales\", \"data\": [100, 150, 120]}]\n    }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/visualization/generate/"
+          }
+        },
+        {
+          "name": "Generate with AI",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": [\n        {\"month\": \"Jan\", \"sales\": 100, \"expenses\": 80},\n        {\"month\": \"Feb\", \"sales\": 150, \"expenses\": 90}\n    ],\n    \"prompt\": \"Create a comparison chart showing sales vs expenses trend\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/visualization/generate-ai/"
+          }
+        },
+        {
+          "name": "Dashboard Charts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/visualization/dashboard/"
+          }
+        }
+      ]
+    }
+  ]
+}
