@@ -26,7 +26,8 @@ from .models import (
     Payment, PaymentAllocation, Expense, AccountType,
     Project, ProjectDocument, ProjectStatus,
     Receipt, RecognitionStatus,
-    ExtractedField, ExtractedFieldType, FieldCorrectionHistory, ReceiptCorrectionSummary
+    ExtractedField, ExtractedFieldType, FieldCorrectionHistory, ReceiptCorrectionSummary,
+    Report, ReportExport, ReportTemplate, ReportSchedule, ReportType, ReportStatus, ExportFormat
 )
 from .serializers import (
     FiscalYearSerializer, AccountingPeriodSerializer, CurrencySerializer,
@@ -42,8 +43,13 @@ from .serializers import (
     BulkReceiptUploadSerializer, ReceiptClassifySerializer, BulkReceiptClassifySerializer,
     BulkReceiptStatusUpdateSerializer,
     ExtractedFieldSerializer, ExtractedFieldListSerializer, FieldCorrectionHistorySerializer,
-    ReceiptCorrectSerializer, ReceiptWithFieldsSerializer, ReceiptCorrectionSummarySerializer
+    ReceiptCorrectSerializer, ReceiptWithFieldsSerializer, ReceiptCorrectionSummarySerializer,
+    # Report serializers
+    ReportSerializer, ReportListSerializer, ReportExportSerializer, ReportExportListSerializer,
+    ReportTemplateSerializer, ReportScheduleSerializer, ReportFilterSerializer,
+    GenerateReportSerializer, ExportReportSerializer, UpdateReportSerializer, ReportDataSerializer
 )
+from .services import ReportGeneratorService, ReportExporterService, ReportCacheService
 
 
 class FiscalYearViewSet(viewsets.ModelViewSet):
@@ -1737,3 +1743,442 @@ class ReceiptViewSet(viewsets.ModelViewSet):
                 'last_correction_at': None,
                 'last_corrected_by': None
             }
+
+
+# =================================================================
+# Financial Reports ViewSet (New Reporting System)
+# =================================================================
+
+class FinancialReportViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for comprehensive financial report management.
+    
+    Provides endpoints for:
+    - Generating reports (Income Statement, Balance Sheet, General Ledger, Sub-ledger)
+    - Export to Word/Excel/CSV
+    - Update existing reports with new filters
+    - Cache management for large reports
+    - Report templates and scheduling
+    
+    Endpoints:
+    - GET /financial-reports/ - List all reports with filters
+    - POST /financial-reports/ - Generate a new report
+    - GET /financial-reports/{id}/ - Get report with data
+    - PUT /financial-reports/{id}/ - Update report and regenerate
+    - DELETE /financial-reports/{id}/ - Delete report
+    - POST /financial-reports/{id}/export/ - Export to Word/Excel/CSV
+    - GET /financial-reports/{id}/exports/ - List exports for a report
+    - POST /financial-reports/{id}/refresh/ - Force refresh cached data
+    - GET /financial-reports/types/ - Get available report types
+    - GET /financial-reports/templates/ - List report templates
+    - POST /financial-reports/templates/ - Create template
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = Report.objects.all()
+        
+        # Filter by report type
+        report_type = self.request.query_params.get('report_type')
+        if report_type:
+            queryset = queryset.filter(report_type=report_type)
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filter by date range (generated_at)
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        if date_from:
+            queryset = queryset.filter(generated_at__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(generated_at__date__lte=date_to)
+        
+        # Filter by project in filter_config
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            queryset = queryset.filter(filter_config__project_id=project_id)
+        
+        # Search by name
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(description__icontains=search)
+            )
+        
+        return queryset.select_related('generated_by').order_by('-created_at')
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ReportListSerializer
+        if self.action == 'create':
+            return GenerateReportSerializer
+        if self.action in ['update', 'partial_update']:
+            return UpdateReportSerializer
+        if self.action == 'export':
+            return ExportReportSerializer
+        return ReportSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Generate a new financial report.
+        
+        Request body:
+        {
+            "report_type": "INCOME_STATEMENT",
+            "name": "Q4 2024 Income Statement",
+            "description": "Income statement for Q4 2024",
+            "filters": {
+                "date_from": "2024-10-01",
+                "date_to": "2024-12-31",
+                "project_id": "uuid",  // optional
+                "vendor_id": "uuid",   // optional
+                "category": "OPERATING",  // optional
+                "account_ids": ["uuid1", "uuid2"],  // optional
+                "include_zero_balances": false,
+                "comparison_period": "previous_year"  // optional
+            }
+        }
+        """
+        serializer = GenerateReportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Create report record
+        report = Report.objects.create(
+            tenant=getattr(request, 'tenant', None),
+            report_type=serializer.validated_data['report_type'],
+            name=serializer.validated_data['name'],
+            description=serializer.validated_data.get('description', ''),
+            filter_config=serializer.validated_data.get('filters', {}),
+            generated_by=request.user,
+            status=ReportStatus.GENERATING.value
+        )
+        
+        try:
+            # Generate report data
+            generator = ReportGeneratorService()
+            report_data = generator.generate_report(report)
+            
+            # Store generated data
+            report.cached_data = report_data
+            report.status = ReportStatus.COMPLETED.value
+            report.generated_at = timezone.now()
+            report.save()
+            
+            return Response(
+                ReportSerializer(report).data,
+                status=status.HTTP_201_CREATED
+            )
+            
+        except Exception as e:
+            report.status = ReportStatus.FAILED.value
+            report.error_message = str(e)
+            report.save()
+            
+            return Response(
+                {'error': str(e), 'report_id': str(report.id)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Get report with full data."""
+        report = self.get_object()
+        
+        # Check if data needs refresh
+        cache_service = ReportCacheService()
+        cached_data = cache_service.get(report)
+        
+        if cached_data is None and report.cached_data:
+            # Re-cache from stored data
+            cache_service.set(report, report.cached_data)
+            cached_data = report.cached_data
+        
+        serializer = ReportSerializer(report)
+        data = serializer.data
+        data['report_data'] = cached_data or report.cached_data
+        
+        return Response(data)
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Update report filters and regenerate.
+        Increments version number.
+        """
+        report = self.get_object()
+        serializer = UpdateReportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Update report fields
+        if 'name' in serializer.validated_data:
+            report.name = serializer.validated_data['name']
+        if 'description' in serializer.validated_data:
+            report.description = serializer.validated_data['description']
+        if 'filters' in serializer.validated_data:
+            report.filter_config = serializer.validated_data['filters']
+        
+        # Regenerate
+        report.status = ReportStatus.GENERATING.value
+        report.version += 1
+        report.save()
+        
+        try:
+            generator = ReportGeneratorService()
+            report_data = generator.generate_report(report, force_refresh=True)
+            
+            report.cached_data = report_data
+            report.status = ReportStatus.COMPLETED.value
+            report.generated_at = timezone.now()
+            report.save()
+            
+            return Response(ReportSerializer(report).data)
+            
+        except Exception as e:
+            report.status = ReportStatus.FAILED.value
+            report.error_message = str(e)
+            report.save()
+            
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def export(self, request, pk=None):
+        """
+        Export report to Word/Excel/CSV.
+        
+        Request body:
+        {
+            "format": "EXCEL",  // EXCEL, WORD, CSV
+            "filename": "Q4_Income_Statement"  // optional
+        }
+        """
+        report = self.get_object()
+        
+        if report.status != ReportStatus.COMPLETED.value:
+            return Response(
+                {'error': 'Report must be completed before export'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = ExportReportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        export_format = serializer.validated_data['format']
+        filename = serializer.validated_data.get('filename')
+        
+        try:
+            exporter = ReportExporterService()
+            export_record = exporter.export_report(report, export_format, filename)
+            
+            return Response({
+                'message': 'Report exported successfully',
+                'export': ReportExportSerializer(export_record).data
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Export failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def exports(self, request, pk=None):
+        """List all exports for a report."""
+        report = self.get_object()
+        exports = ReportExport.objects.filter(report=report).order_by('-created_at')
+        
+        page = self.paginate_queryset(exports)
+        if page is not None:
+            serializer = ReportExportListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = ReportExportListSerializer(exports, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        """Download an export file."""
+        report = self.get_object()
+        
+        export_id = request.query_params.get('export_id')
+        if not export_id:
+            # Get latest export
+            export_record = ReportExport.objects.filter(report=report).order_by('-created_at').first()
+        else:
+            export_record = ReportExport.objects.filter(id=export_id, report=report).first()
+        
+        if not export_record or not export_record.file:
+            return Response(
+                {'error': 'Export file not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Increment download count
+        export_record.download_count += 1
+        export_record.save(update_fields=['download_count'])
+        
+        # Determine content type
+        content_types = {
+            ExportFormat.EXCEL.value: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ExportFormat.WORD.value: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ExportFormat.CSV.value: 'text/csv',
+            ExportFormat.PDF.value: 'application/pdf',
+        }
+        content_type = content_types.get(export_record.export_format, 'application/octet-stream')
+        
+        response = HttpResponse(export_record.file.read(), content_type=content_type)
+        response['Content-Disposition'] = f'attachment; filename="{export_record.file_name}"'
+        return response
+    
+    @action(detail=True, methods=['post'])
+    def refresh(self, request, pk=None):
+        """
+        Force refresh report data (clear cache and regenerate).
+        """
+        report = self.get_object()
+        
+        # Clear cache
+        cache_service = ReportCacheService()
+        cache_service.delete(report)
+        
+        # Regenerate
+        report.status = ReportStatus.GENERATING.value
+        report.save()
+        
+        try:
+            generator = ReportGeneratorService()
+            report_data = generator.generate_report(report, force_refresh=True)
+            
+            report.cached_data = report_data
+            report.status = ReportStatus.COMPLETED.value
+            report.generated_at = timezone.now()
+            report.save()
+            
+            return Response({
+                'message': 'Report refreshed successfully',
+                'report': ReportSerializer(report).data
+            })
+            
+        except Exception as e:
+            report.status = ReportStatus.FAILED.value
+            report.error_message = str(e)
+            report.save()
+            
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def types(self, request):
+        """Get available report types with descriptions."""
+        types = []
+        for report_type in ReportType:
+            types.append({
+                'value': report_type.value,
+                'label': report_type.value.replace('_', ' ').title(),
+                'description': self._get_report_type_description(report_type.value)
+            })
+        return Response({'report_types': types})
+    
+    @action(detail=False, methods=['get', 'post'])
+    def templates(self, request):
+        """List or create report templates."""
+        if request.method == 'GET':
+            templates = ReportTemplate.objects.filter(is_active=True)
+            
+            # Filter by report type
+            report_type = request.query_params.get('report_type')
+            if report_type:
+                templates = templates.filter(report_type=report_type)
+            
+            serializer = ReportTemplateSerializer(templates, many=True)
+            return Response({'templates': serializer.data})
+        
+        elif request.method == 'POST':
+            serializer = ReportTemplateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            
+            template = ReportTemplate.objects.create(
+                tenant=getattr(request, 'tenant', None),
+                report_type=serializer.validated_data['report_type'],
+                name=serializer.validated_data['name'],
+                description=serializer.validated_data.get('description', ''),
+                template_config=serializer.validated_data.get('template_config', {}),
+                column_mappings=serializer.validated_data.get('column_mappings', {}),
+                created_by=request.user
+            )
+            
+            return Response(
+                ReportTemplateSerializer(template).data,
+                status=status.HTTP_201_CREATED
+            )
+    
+    @action(detail=False, methods=['get'])
+    def schedules(self, request):
+        """List report schedules."""
+        schedules = ReportSchedule.objects.filter(is_active=True)
+        serializer = ReportScheduleSerializer(schedules, many=True)
+        return Response({'schedules': serializer.data})
+    
+    @action(detail=False, methods=['post'])
+    def create_schedule(self, request):
+        """Create a new report schedule."""
+        serializer = ReportScheduleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        schedule = ReportSchedule.objects.create(
+            tenant=getattr(request, 'tenant', None),
+            report_type=serializer.validated_data['report_type'],
+            name=serializer.validated_data['name'],
+            description=serializer.validated_data.get('description', ''),
+            filter_config=serializer.validated_data.get('filter_config', {}),
+            schedule_cron=serializer.validated_data['schedule_cron'],
+            export_format=serializer.validated_data.get('export_format', ExportFormat.EXCEL.value),
+            email_recipients=serializer.validated_data.get('email_recipients', []),
+            created_by=request.user
+        )
+        
+        return Response(
+            ReportScheduleSerializer(schedule).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Get report statistics."""
+        queryset = self.get_queryset()
+        
+        total = queryset.count()
+        by_type = queryset.values('report_type').annotate(count=Count('id'))
+        by_status = queryset.values('status').annotate(count=Count('id'))
+        
+        # Recent exports
+        recent_exports = ReportExport.objects.order_by('-created_at')[:10]
+        
+        return Response({
+            'total_reports': total,
+            'by_type': {item['report_type']: item['count'] for item in by_type},
+            'by_status': {item['status']: item['count'] for item in by_status},
+            'recent_exports': ReportExportListSerializer(recent_exports, many=True).data
+        })
+    
+    def _get_report_type_description(self, report_type):
+        """Get description for report type."""
+        descriptions = {
+            ReportType.INCOME_STATEMENT.value: 'Shows revenue, expenses, and net income/loss for a period',
+            ReportType.BALANCE_SHEET.value: 'Shows assets, liabilities, and equity at a point in time',
+            ReportType.GENERAL_LEDGER.value: 'Detailed transactions for all accounts with running balances',
+            ReportType.SUB_LEDGER.value: 'Detailed transactions for specific accounts (AR, AP, etc.)',
+            ReportType.TRIAL_BALANCE.value: 'Lists all account balances to verify debits equal credits',
+            ReportType.CASH_FLOW.value: 'Shows cash inflows and outflows from operations, investing, and financing',
+            ReportType.ACCOUNTS_RECEIVABLE.value: 'Aging report of outstanding customer invoices',
+            ReportType.ACCOUNTS_PAYABLE.value: 'Aging report of outstanding vendor bills',
+            ReportType.EXPENSE_REPORT.value: 'Summary of expenses by category, project, or vendor',
+            ReportType.CUSTOM.value: 'Custom report with user-defined parameters',
+        }
+        return descriptions.get(report_type, 'Financial report')

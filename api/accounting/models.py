@@ -1306,3 +1306,443 @@ class ProjectDocument(BaseModel):
     
     def __str__(self):
         return f"{self.project.code} - {self.title}"
+
+
+# =================================================================
+# Report Models
+# =================================================================
+
+class ReportType(str, Enum):
+    """Types of financial reports"""
+    INCOME_STATEMENT = 'INCOME_STATEMENT'      # 損益表
+    BALANCE_SHEET = 'BALANCE_SHEET'            # 資產負債表
+    GENERAL_LEDGER = 'GENERAL_LEDGER'          # 總帳
+    SUB_LEDGER = 'SUB_LEDGER'                  # 明細帳
+    TRIAL_BALANCE = 'TRIAL_BALANCE'            # 試算表
+    CASH_FLOW = 'CASH_FLOW'                    # 現金流量表
+    ACCOUNTS_RECEIVABLE = 'ACCOUNTS_RECEIVABLE'  # 應收帳款
+    ACCOUNTS_PAYABLE = 'ACCOUNTS_PAYABLE'      # 應付帳款
+    EXPENSE_REPORT = 'EXPENSE_REPORT'          # 費用報表
+    TAX_SUMMARY = 'TAX_SUMMARY'                # 稅務摘要
+    CUSTOM = 'CUSTOM'                          # 自訂報表
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class ReportStatus(str, Enum):
+    """Status of report generation"""
+    PENDING = 'PENDING'
+    GENERATING = 'GENERATING'
+    COMPLETED = 'COMPLETED'
+    FAILED = 'FAILED'
+    EXPIRED = 'EXPIRED'
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class ExportFormat(str, Enum):
+    """Supported export formats"""
+    PDF = 'PDF'
+    EXCEL = 'EXCEL'
+    WORD = 'WORD'
+    CSV = 'CSV'
+    JSON = 'JSON'
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class ReportTemplate(BaseModel):
+    """
+    Report templates for reusable report configurations.
+    Stores common filter presets and display settings.
+    """
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='report_templates',
+        null=True,
+        blank=True
+    )
+    
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    report_type = models.CharField(max_length=30, choices=ReportType.choices())
+    
+    # Default filters
+    default_filters = models.JSONField(default=dict, blank=True)
+    # Example: {"date_range": "last_month", "project_id": null, "account_types": ["EXPENSE"]}
+    
+    # Display configuration
+    display_config = models.JSONField(default=dict, blank=True)
+    # Example: {"show_subtotals": true, "group_by": "month", "columns": [...]}
+    
+    # Template-specific settings
+    include_comparison = models.BooleanField(default=False)  # Compare with previous period
+    comparison_type = models.CharField(max_length=20, blank=True)  # "previous_period", "previous_year"
+    
+    # Export settings
+    default_export_format = models.CharField(
+        max_length=10, 
+        choices=ExportFormat.choices(), 
+        default=ExportFormat.PDF.value
+    )
+    
+    # Access control
+    is_public = models.BooleanField(default=False)  # Available to all tenant users
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_report_templates'
+    )
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
+    class Meta:
+        ordering = ['name']
+        unique_together = ['tenant', 'name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.report_type})"
+
+
+class Report(BaseModel):
+    """
+    Generated report instances with cached data.
+    Supports update-existing-report workflow.
+    """
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='reports',
+        null=True,
+        blank=True
+    )
+    
+    # Report identification
+    report_number = models.CharField(max_length=50)  # Auto-generated: RPT-2024-0001
+    name = models.CharField(max_length=200)
+    report_type = models.CharField(max_length=30, choices=ReportType.choices())
+    
+    # Optional template reference
+    template = models.ForeignKey(
+        ReportTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='generated_reports'
+    )
+    
+    # Report period
+    period_start = models.DateField()
+    period_end = models.DateField()
+    
+    # Filters applied
+    filters = models.JSONField(default=dict, blank=True)
+    # Example: {
+    #   "project_ids": ["uuid1", "uuid2"],
+    #   "vendor_ids": ["uuid3"],
+    #   "category": "EXPENSE",
+    #   "account_ids": ["uuid4"],
+    #   "include_drafts": false
+    # }
+    
+    # Display configuration
+    display_config = models.JSONField(default=dict, blank=True)
+    
+    # Comparison data
+    include_comparison = models.BooleanField(default=False)
+    comparison_period_start = models.DateField(null=True, blank=True)
+    comparison_period_end = models.DateField(null=True, blank=True)
+    
+    # Generation status
+    status = models.CharField(
+        max_length=20, 
+        choices=ReportStatus.choices(), 
+        default=ReportStatus.PENDING.value
+    )
+    generation_started_at = models.DateTimeField(null=True, blank=True)
+    generation_completed_at = models.DateTimeField(null=True, blank=True)
+    generation_error = models.TextField(blank=True)
+    
+    # Cached report data (JSON for quick access)
+    cached_data = models.JSONField(null=True, blank=True)
+    # Stores the full report data structure for fast retrieval
+    
+    # Summary totals for quick display
+    summary_totals = models.JSONField(default=dict, blank=True)
+    # Example: {"total_revenue": 100000, "total_expenses": 80000, "net_income": 20000}
+    
+    # Cache management
+    cache_key = models.CharField(max_length=255, blank=True)  # Redis cache key
+    cache_expires_at = models.DateTimeField(null=True, blank=True)
+    data_hash = models.CharField(max_length=64, blank=True)  # SHA256 of source data for invalidation
+    
+    # Version control for update workflow
+    version = models.PositiveIntegerField(default=1)
+    parent_report = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='updated_versions'
+    )
+    is_latest = models.BooleanField(default=True)
+    
+    # Audit
+    generated_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='generated_reports'
+    )
+    last_viewed_at = models.DateTimeField(null=True, blank=True)
+    view_count = models.PositiveIntegerField(default=0)
+    
+    # Notes & Comments
+    notes = models.TextField(blank=True)
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['tenant', 'report_number']
+        indexes = [
+            models.Index(fields=['tenant', 'report_type', 'status']),
+            models.Index(fields=['tenant', 'period_start', 'period_end']),
+            models.Index(fields=['cache_key']),
+        ]
+    
+    def __str__(self):
+        return f"{self.report_number} - {self.name}"
+    
+    @property
+    def is_cache_valid(self):
+        """Check if cached data is still valid"""
+        if not self.cache_expires_at:
+            return False
+        return timezone.now() < self.cache_expires_at
+    
+    @property
+    def period_display(self):
+        """Human-readable period string"""
+        return f"{self.period_start.strftime('%Y-%m-%d')} to {self.period_end.strftime('%Y-%m-%d')}"
+    
+    def increment_view_count(self):
+        """Update view statistics"""
+        self.view_count += 1
+        self.last_viewed_at = timezone.now()
+        self.save(update_fields=['view_count', 'last_viewed_at'])
+
+
+class ReportExport(BaseModel):
+    """
+    Track exported report files.
+    Stores generated files for download.
+    """
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='report_exports',
+        null=True,
+        blank=True
+    )
+    
+    report = models.ForeignKey(
+        Report,
+        on_delete=models.CASCADE,
+        related_name='exports'
+    )
+    
+    # Export details
+    export_format = models.CharField(max_length=10, choices=ExportFormat.choices())
+    
+    # File storage
+    file = models.FileField(upload_to='report_exports/%Y/%m/', null=True, blank=True)
+    file_name = models.CharField(max_length=255)
+    file_size = models.PositiveIntegerField(default=0)  # bytes
+    mime_type = models.CharField(max_length=100)
+    
+    # Generation status
+    status = models.CharField(
+        max_length=20,
+        choices=ReportStatus.choices(),
+        default=ReportStatus.PENDING.value
+    )
+    error_message = models.TextField(blank=True)
+    
+    # Export configuration
+    export_config = models.JSONField(default=dict, blank=True)
+    # Example: {"include_charts": true, "page_orientation": "landscape", "paper_size": "A4"}
+    
+    # Expiration
+    expires_at = models.DateTimeField(null=True, blank=True)  # Auto-delete old exports
+    download_count = models.PositiveIntegerField(default=0)
+    last_downloaded_at = models.DateTimeField(null=True, blank=True)
+    
+    # Audit
+    exported_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='report_exports'
+    )
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['report', 'export_format']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.report.report_number} - {self.export_format}"
+    
+    @property
+    def is_expired(self):
+        """Check if export file has expired"""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+    
+    def increment_download_count(self):
+        """Update download statistics"""
+        self.download_count += 1
+        self.last_downloaded_at = timezone.now()
+        self.save(update_fields=['download_count', 'last_downloaded_at'])
+
+
+class ReportSchedule(BaseModel):
+    """
+    Schedule automatic report generation.
+    """
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='report_schedules',
+        null=True,
+        blank=True
+    )
+    
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    
+    # Template to use
+    template = models.ForeignKey(
+        ReportTemplate,
+        on_delete=models.CASCADE,
+        related_name='schedules'
+    )
+    
+    # Schedule configuration
+    is_active = models.BooleanField(default=True)
+    schedule_type = models.CharField(max_length=20)  # 'daily', 'weekly', 'monthly', 'quarterly'
+    schedule_day = models.PositiveSmallIntegerField(null=True, blank=True)  # Day of week (0-6) or day of month (1-31)
+    schedule_time = models.TimeField()  # Time to run
+    timezone = models.CharField(max_length=50, default='UTC')
+    
+    # Period configuration (relative to run date)
+    period_type = models.CharField(max_length=20)  # 'previous_day', 'previous_week', 'previous_month', 'mtd', 'ytd'
+    
+    # Export settings
+    auto_export = models.BooleanField(default=True)
+    export_formats = models.JSONField(default=list)  # ['PDF', 'EXCEL']
+    
+    # Email delivery
+    send_email = models.BooleanField(default=False)
+    email_recipients = models.JSONField(default=list)  # List of email addresses
+    email_subject_template = models.CharField(max_length=200, blank=True)
+    
+    # Tracking
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    next_run_at = models.DateTimeField(null=True, blank=True)
+    last_run_status = models.CharField(max_length=20, choices=ReportStatus.choices(), blank=True)
+    run_count = models.PositiveIntegerField(default=0)
+    
+    # Owner
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='report_schedules'
+    )
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
+    class Meta:
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.schedule_type})"
+
+
+class ReportSection(BaseModel):
+    """
+    Sections within a report for sub-ledger and detailed reports.
+    Allows hierarchical organization of report data.
+    """
+    report = models.ForeignKey(
+        Report,
+        on_delete=models.CASCADE,
+        related_name='sections'
+    )
+    
+    # Section identification
+    section_type = models.CharField(max_length=50)  # 'header', 'account_group', 'summary', 'footer'
+    title = models.CharField(max_length=200)
+    sequence = models.PositiveIntegerField(default=0)
+    
+    # Parent section (for nesting)
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='children'
+    )
+    
+    # Account reference (for account-specific sections)
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='report_sections'
+    )
+    
+    # Section data
+    data = models.JSONField(default=dict, blank=True)
+    # Stores section-specific data like line items, subtotals
+    
+    # Totals
+    debit_total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    credit_total = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    balance = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    
+    # Comparison values
+    comparison_balance = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    variance = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    variance_percent = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    
+    class Meta:
+        ordering = ['report', 'sequence']
+    
+    def __str__(self):
+        return f"{self.report.report_number} - {self.title}"
+

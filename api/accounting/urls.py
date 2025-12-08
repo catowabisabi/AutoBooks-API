@@ -4,7 +4,8 @@ from .views import (
     FiscalYearViewSet, AccountingPeriodViewSet, CurrencyViewSet, TaxRateViewSet,
     AccountViewSet, JournalEntryViewSet, ContactViewSet, InvoiceViewSet,
     PaymentViewSet, ExpenseViewSet, ReportViewSet,
-    ProjectViewSet, ProjectDocumentViewSet, ReceiptViewSet
+    ProjectViewSet, ProjectDocumentViewSet, ReceiptViewSet,
+    FinancialReportViewSet
 )
 
 router = DefaultRouter()
@@ -22,5 +23,6 @@ router.register(r'accounting/reports', ReportViewSet, basename='report')
 router.register(r'accounting/projects', ProjectViewSet, basename='project')
 router.register(r'accounting/project-documents', ProjectDocumentViewSet, basename='project-document')
 router.register(r'accounting/receipts', ReceiptViewSet, basename='receipt')
+router.register(r'accounting/financial-reports', FinancialReportViewSet, basename='financial-report')
 
 urlpatterns = router.urls

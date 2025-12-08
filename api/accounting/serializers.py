@@ -5,7 +5,9 @@ from .models import (
     JournalEntry, JournalEntryLine, Contact, Invoice, InvoiceLine,
     Payment, PaymentAllocation, Expense, Project, ProjectDocument,
     ProjectStatus, Receipt, RecognitionStatus,
-    ExtractedField, ExtractedFieldType, FieldCorrectionHistory, ReceiptCorrectionSummary
+    ExtractedField, ExtractedFieldType, FieldCorrectionHistory, ReceiptCorrectionSummary,
+    Report, ReportTemplate, ReportExport, ReportSchedule, ReportSection,
+    ReportType, ReportStatus, ExportFormat
 )
 
 
@@ -917,4 +919,449 @@ class FieldExtractionResultSerializer(serializers.Serializer):
     fields_created = serializers.IntegerField()
     correction_history_created = serializers.IntegerField()
     fields = ExtractedFieldListSerializer(many=True)
+
+
+# =================================================================
+# Report Serializers
+# =================================================================
+
+class ReportTemplateSerializer(serializers.ModelSerializer):
+    """Full serializer for report templates"""
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
+    report_type_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ReportTemplate
+        fields = [
+            'id', 'name', 'description', 'report_type', 'report_type_display',
+            'default_filters', 'display_config',
+            'include_comparison', 'comparison_type',
+            'default_export_format', 'is_public',
+            'created_by', 'created_by_name',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
+    
+    def get_report_type_display(self, obj):
+        type_labels = {
+            'INCOME_STATEMENT': 'Income Statement',
+            'BALANCE_SHEET': 'Balance Sheet',
+            'GENERAL_LEDGER': 'General Ledger',
+            'SUB_LEDGER': 'Sub-Ledger',
+            'TRIAL_BALANCE': 'Trial Balance',
+            'CASH_FLOW': 'Cash Flow Statement',
+            'ACCOUNTS_RECEIVABLE': 'Accounts Receivable Aging',
+            'ACCOUNTS_PAYABLE': 'Accounts Payable Aging',
+            'EXPENSE_REPORT': 'Expense Report',
+            'TAX_SUMMARY': 'Tax Summary',
+            'CUSTOM': 'Custom Report',
+        }
+        return type_labels.get(obj.report_type, obj.report_type)
+
+
+class ReportTemplateListSerializer(serializers.ModelSerializer):
+    """Simplified serializer for listing templates"""
+    class Meta:
+        model = ReportTemplate
+        fields = ['id', 'name', 'report_type', 'is_public', 'created_at']
+
+
+class ReportSectionSerializer(serializers.ModelSerializer):
+    """Serializer for report sections"""
+    account_code = serializers.CharField(source='account.code', read_only=True)
+    account_name = serializers.CharField(source='account.name', read_only=True)
+    children = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ReportSection
+        fields = [
+            'id', 'section_type', 'title', 'sequence',
+            'account', 'account_code', 'account_name',
+            'data', 'debit_total', 'credit_total', 'balance',
+            'comparison_balance', 'variance', 'variance_percent',
+            'children'
+        ]
+    
+    def get_children(self, obj):
+        children = obj.children.all().order_by('sequence')
+        return ReportSectionSerializer(children, many=True).data
+
+
+class ReportExportSerializer(serializers.ModelSerializer):
+    """Serializer for report exports"""
+    exported_by_name = serializers.CharField(source='exported_by.full_name', read_only=True)
+    file_url = serializers.SerializerMethodField()
+    is_expired = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = ReportExport
+        fields = [
+            'id', 'report', 'export_format', 'file', 'file_url',
+            'file_name', 'file_size', 'mime_type',
+            'status', 'error_message', 'export_config',
+            'expires_at', 'is_expired', 'download_count', 'last_downloaded_at',
+            'exported_by', 'exported_by_name',
+            'created_at'
+        ]
+        read_only_fields = [
+            'id', 'file', 'file_name', 'file_size', 'mime_type',
+            'status', 'error_message', 'download_count', 'last_downloaded_at',
+            'exported_by', 'created_at'
+        ]
+    
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return None
+
+
+class ReportExportListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for listing report exports"""
+    exported_by_name = serializers.CharField(source='exported_by.full_name', read_only=True)
+    report_name = serializers.CharField(source='report.name', read_only=True)
+    
+    class Meta:
+        model = ReportExport
+        fields = [
+            'id', 'report', 'report_name', 'export_format',
+            'file_name', 'file_size', 'status',
+            'download_count', 'exported_by_name', 'created_at'
+        ]
+
+
+class ReportSerializer(serializers.ModelSerializer):
+    """Full serializer for reports"""
+    generated_by_name = serializers.CharField(source='generated_by.full_name', read_only=True)
+    template_name = serializers.CharField(source='template.name', read_only=True)
+    report_type_display = serializers.SerializerMethodField()
+    is_cache_valid = serializers.BooleanField(read_only=True)
+    period_display = serializers.CharField(read_only=True)
+    sections = ReportSectionSerializer(many=True, read_only=True)
+    exports = ReportExportSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Report
+        fields = [
+            'id', 'report_number', 'name', 'report_type', 'report_type_display',
+            'template', 'template_name',
+            'period_start', 'period_end', 'period_display',
+            'filters', 'display_config',
+            'include_comparison', 'comparison_period_start', 'comparison_period_end',
+            'status', 'generation_started_at', 'generation_completed_at', 'generation_error',
+            'cached_data', 'summary_totals', 'is_cache_valid',
+            'version', 'parent_report', 'is_latest',
+            'generated_by', 'generated_by_name',
+            'last_viewed_at', 'view_count', 'notes',
+            'sections', 'exports',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'report_number', 'status', 'generation_started_at', 
+            'generation_completed_at', 'generation_error', 'cached_data',
+            'cache_key', 'cache_expires_at', 'data_hash',
+            'version', 'is_latest', 'generated_by',
+            'last_viewed_at', 'view_count', 'created_at', 'updated_at'
+        ]
+    
+    def get_report_type_display(self, obj):
+        type_labels = {
+            'INCOME_STATEMENT': 'Income Statement',
+            'BALANCE_SHEET': 'Balance Sheet',
+            'GENERAL_LEDGER': 'General Ledger',
+            'SUB_LEDGER': 'Sub-Ledger',
+            'TRIAL_BALANCE': 'Trial Balance',
+            'CASH_FLOW': 'Cash Flow Statement',
+            'ACCOUNTS_RECEIVABLE': 'Accounts Receivable Aging',
+            'ACCOUNTS_PAYABLE': 'Accounts Payable Aging',
+            'EXPENSE_REPORT': 'Expense Report',
+            'TAX_SUMMARY': 'Tax Summary',
+            'CUSTOM': 'Custom Report',
+        }
+        return type_labels.get(obj.report_type, obj.report_type)
+
+
+class ReportListSerializer(serializers.ModelSerializer):
+    """Simplified serializer for listing reports"""
+    generated_by_name = serializers.CharField(source='generated_by.full_name', read_only=True)
+    template_name = serializers.CharField(source='template.name', read_only=True)
+    export_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Report
+        fields = [
+            'id', 'report_number', 'name', 'report_type',
+            'template_name', 'period_start', 'period_end',
+            'status', 'summary_totals', 'version', 'is_latest',
+            'generated_by_name', 'view_count', 'export_count',
+            'created_at'
+        ]
+    
+    def get_export_count(self, obj):
+        return obj.exports.count()
+
+
+class ReportScheduleSerializer(serializers.ModelSerializer):
+    """Serializer for report schedules"""
+    template_name = serializers.CharField(source='template.name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
+    
+    class Meta:
+        model = ReportSchedule
+        fields = [
+            'id', 'name', 'description',
+            'template', 'template_name',
+            'is_active', 'schedule_type', 'schedule_day', 'schedule_time', 'timezone',
+            'period_type', 'auto_export', 'export_formats',
+            'send_email', 'email_recipients', 'email_subject_template',
+            'last_run_at', 'next_run_at', 'last_run_status', 'run_count',
+            'created_by', 'created_by_name',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'last_run_at', 'next_run_at', 'last_run_status', 
+            'run_count', 'created_by', 'created_at', 'updated_at'
+        ]
+
+
+# =================================================================
+# Report Generation Request Serializers
+# =================================================================
+
+class ReportFilterSerializer(serializers.Serializer):
+    """Serializer for report filter parameters"""
+    project_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        default=list
+    )
+    vendor_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        default=list
+    )
+    customer_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        default=list
+    )
+    account_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        default=list
+    )
+    account_types = serializers.ListField(
+        child=serializers.ChoiceField(choices=['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE']),
+        required=False,
+        default=list
+    )
+    categories = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        default=list
+    )
+    include_drafts = serializers.BooleanField(default=False)
+    include_voided = serializers.BooleanField(default=False)
+
+
+class GenerateReportSerializer(serializers.Serializer):
+    """Serializer for report generation requests"""
+    name = serializers.CharField(max_length=200)
+    report_type = serializers.ChoiceField(choices=ReportType.choices())
+    template_id = serializers.UUIDField(required=False, allow_null=True)
+    
+    # Period
+    period_start = serializers.DateField()
+    period_end = serializers.DateField()
+    
+    # Filters
+    filters = ReportFilterSerializer(required=False)
+    
+    # Display options
+    display_config = serializers.DictField(required=False, default=dict)
+    
+    # Comparison
+    include_comparison = serializers.BooleanField(default=False)
+    comparison_period_start = serializers.DateField(required=False, allow_null=True)
+    comparison_period_end = serializers.DateField(required=False, allow_null=True)
+    
+    # Notes
+    notes = serializers.CharField(required=False, allow_blank=True, default='')
+    
+    def validate(self, data):
+        if data['period_start'] > data['period_end']:
+            raise serializers.ValidationError({
+                'period_end': _("End date must be after start date")
+            })
+        
+        if data.get('include_comparison'):
+            if not data.get('comparison_period_start') or not data.get('comparison_period_end'):
+                raise serializers.ValidationError({
+                    'comparison_period_start': _("Comparison period dates are required when comparison is enabled")
+                })
+            if data['comparison_period_start'] > data['comparison_period_end']:
+                raise serializers.ValidationError({
+                    'comparison_period_end': _("Comparison end date must be after start date")
+                })
+        
+        return data
+
+
+class UpdateReportSerializer(serializers.Serializer):
+    """Serializer for updating/regenerating an existing report"""
+    regenerate_data = serializers.BooleanField(default=False)
+    update_period = serializers.BooleanField(default=False)
+    period_start = serializers.DateField(required=False)
+    period_end = serializers.DateField(required=False)
+    filters = ReportFilterSerializer(required=False)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        if data.get('update_period'):
+            if not data.get('period_start') or not data.get('period_end'):
+                raise serializers.ValidationError({
+                    'period_start': _("Period dates are required when updating period")
+                })
+        return data
+
+
+class ExportReportSerializer(serializers.Serializer):
+    """Serializer for export requests"""
+    export_format = serializers.ChoiceField(choices=ExportFormat.choices())
+    export_config = serializers.DictField(required=False, default=dict)
+    # Config options: 
+    # - include_charts: bool
+    # - page_orientation: 'portrait' | 'landscape'
+    # - paper_size: 'A4' | 'Letter'
+    # - include_header: bool
+    # - include_footer: bool
+    # - company_logo: bool
+
+
+# =================================================================
+# Report Data Response Serializers
+# =================================================================
+
+class IncomeStatementLineSerializer(serializers.Serializer):
+    """Line item for income statement"""
+    account_id = serializers.UUIDField()
+    account_code = serializers.CharField()
+    account_name = serializers.CharField()
+    current_amount = serializers.DecimalField(max_digits=15, decimal_places=2)
+    comparison_amount = serializers.DecimalField(max_digits=15, decimal_places=2, allow_null=True)
+    variance = serializers.DecimalField(max_digits=15, decimal_places=2, allow_null=True)
+    variance_percent = serializers.DecimalField(max_digits=8, decimal_places=2, allow_null=True)
+
+
+class IncomeStatementDataSerializer(serializers.Serializer):
+    """Income statement report data structure"""
+    revenue = serializers.ListField(child=IncomeStatementLineSerializer())
+    total_revenue = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    cost_of_goods = serializers.ListField(child=IncomeStatementLineSerializer())
+    total_cost_of_goods = serializers.DecimalField(max_digits=15, decimal_places=2)
+    gross_profit = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    operating_expenses = serializers.ListField(child=IncomeStatementLineSerializer())
+    total_operating_expenses = serializers.DecimalField(max_digits=15, decimal_places=2)
+    operating_income = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    other_income = serializers.ListField(child=IncomeStatementLineSerializer())
+    other_expenses = serializers.ListField(child=IncomeStatementLineSerializer())
+    
+    income_before_tax = serializers.DecimalField(max_digits=15, decimal_places=2)
+    tax_expense = serializers.DecimalField(max_digits=15, decimal_places=2)
+    net_income = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    # Comparison totals
+    comparison_total_revenue = serializers.DecimalField(max_digits=15, decimal_places=2, allow_null=True)
+    comparison_net_income = serializers.DecimalField(max_digits=15, decimal_places=2, allow_null=True)
+
+
+class BalanceSheetLineSerializer(serializers.Serializer):
+    """Line item for balance sheet"""
+    account_id = serializers.UUIDField()
+    account_code = serializers.CharField()
+    account_name = serializers.CharField()
+    balance = serializers.DecimalField(max_digits=15, decimal_places=2)
+    comparison_balance = serializers.DecimalField(max_digits=15, decimal_places=2, allow_null=True)
+
+
+class BalanceSheetDataSerializer(serializers.Serializer):
+    """Balance sheet report data structure"""
+    # Assets
+    current_assets = serializers.ListField(child=BalanceSheetLineSerializer())
+    total_current_assets = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    fixed_assets = serializers.ListField(child=BalanceSheetLineSerializer())
+    total_fixed_assets = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    other_assets = serializers.ListField(child=BalanceSheetLineSerializer())
+    total_other_assets = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    total_assets = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    # Liabilities
+    current_liabilities = serializers.ListField(child=BalanceSheetLineSerializer())
+    total_current_liabilities = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    long_term_liabilities = serializers.ListField(child=BalanceSheetLineSerializer())
+    total_long_term_liabilities = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    total_liabilities = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    # Equity
+    equity = serializers.ListField(child=BalanceSheetLineSerializer())
+    retained_earnings = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_equity = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    total_liabilities_and_equity = serializers.DecimalField(max_digits=15, decimal_places=2)
+    
+    # Balance check
+    is_balanced = serializers.BooleanField()
+
+
+class GeneralLedgerEntrySerializer(serializers.Serializer):
+    """Single entry in general ledger"""
+    date = serializers.DateField()
+    entry_number = serializers.CharField()
+    description = serializers.CharField()
+    reference = serializers.CharField(allow_blank=True)
+    debit = serializers.DecimalField(max_digits=15, decimal_places=2)
+    credit = serializers.DecimalField(max_digits=15, decimal_places=2)
+    balance = serializers.DecimalField(max_digits=15, decimal_places=2)
+
+
+class GeneralLedgerAccountSerializer(serializers.Serializer):
+    """General ledger for a single account"""
+    account_id = serializers.UUIDField()
+    account_code = serializers.CharField()
+    account_name = serializers.CharField()
+    account_type = serializers.CharField()
+    opening_balance = serializers.DecimalField(max_digits=15, decimal_places=2)
+    entries = serializers.ListField(child=GeneralLedgerEntrySerializer())
+    total_debits = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_credits = serializers.DecimalField(max_digits=15, decimal_places=2)
+    closing_balance = serializers.DecimalField(max_digits=15, decimal_places=2)
+
+
+class GeneralLedgerDataSerializer(serializers.Serializer):
+    """General ledger report data structure"""
+    accounts = serializers.ListField(child=GeneralLedgerAccountSerializer())
+    total_debits = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_credits = serializers.DecimalField(max_digits=15, decimal_places=2)
+    entry_count = serializers.IntegerField()
+
+
+class ReportDataSerializer(serializers.Serializer):
+    """Generic wrapper for report data response"""
+    report_type = serializers.CharField()
+    report_name = serializers.CharField()
+    period_start = serializers.DateField(allow_null=True)
+    period_end = serializers.DateField(allow_null=True)
+    generated_at = serializers.DateTimeField()
+    data = serializers.DictField()
+    summary = serializers.DictField(required=False)
+    metadata = serializers.DictField(required=False)
+
 
