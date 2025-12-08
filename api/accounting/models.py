@@ -883,6 +883,264 @@ class Receipt(BaseModel):
 
 
 # =================================================================
+# Extracted Field with Bounding Box
+# =================================================================
+
+class ExtractedFieldType(str, Enum):
+    """Types of fields that can be extracted from receipts"""
+    VENDOR = 'VENDOR'
+    TOTAL = 'TOTAL'
+    DATE = 'DATE'
+    CURRENCY = 'CURRENCY'
+    TAX = 'TAX'
+    CATEGORY = 'CATEGORY'
+    SUBTOTAL = 'SUBTOTAL'
+    TIP = 'TIP'
+    PAYMENT_METHOD = 'PAYMENT_METHOD'
+    INVOICE_NUMBER = 'INVOICE_NUMBER'
+    LINE_ITEM = 'LINE_ITEM'
+    OTHER = 'OTHER'
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class ExtractedField(BaseModel):
+    """
+    Stores individual extracted fields from receipts with bounding boxes.
+    Each field has coordinates for UI highlighting and confidence scores.
+    """
+    receipt = models.ForeignKey(
+        Receipt,
+        on_delete=models.CASCADE,
+        related_name='extracted_fields'
+    )
+    
+    # Field identification
+    field_type = models.CharField(
+        max_length=30,
+        choices=ExtractedFieldType.choices()
+    )
+    field_name = models.CharField(max_length=100)  # e.g., "vendor_name", "total_amount"
+    
+    # Extracted value
+    raw_value = models.TextField(blank=True)  # Original OCR text
+    normalized_value = models.TextField(blank=True)  # Cleaned/parsed value
+    data_type = models.CharField(
+        max_length=20, 
+        default='string',
+        help_text='string, number, date, currency'
+    )
+    
+    # Bounding box coordinates (relative to image, 0-1 scale or pixels)
+    bbox_x1 = models.FloatField(null=True, blank=True, help_text='Left coordinate')
+    bbox_y1 = models.FloatField(null=True, blank=True, help_text='Top coordinate')
+    bbox_x2 = models.FloatField(null=True, blank=True, help_text='Right coordinate')
+    bbox_y2 = models.FloatField(null=True, blank=True, help_text='Bottom coordinate')
+    bbox_unit = models.CharField(
+        max_length=10,
+        default='ratio',
+        help_text='ratio (0-1) or pixel'
+    )
+    page_number = models.PositiveSmallIntegerField(default=1, help_text='Page number for multi-page receipts')
+    
+    # Confidence score for this specific field
+    confidence_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.0000'))]
+    )
+    
+    # Override values (from manual correction)
+    is_corrected = models.BooleanField(default=False)
+    corrected_value = models.TextField(blank=True)
+    corrected_bbox_x1 = models.FloatField(null=True, blank=True)
+    corrected_bbox_y1 = models.FloatField(null=True, blank=True)
+    corrected_bbox_x2 = models.FloatField(null=True, blank=True)
+    corrected_bbox_y2 = models.FloatField(null=True, blank=True)
+    corrected_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='corrected_fields'
+    )
+    corrected_at = models.DateTimeField(null=True, blank=True)
+    
+    # Version tracking
+    version = models.PositiveIntegerField(default=1)
+    
+    class Meta:
+        ordering = ['field_type', 'created_at']
+        indexes = [
+            models.Index(fields=['receipt', 'field_type']),
+            models.Index(fields=['is_corrected']),
+        ]
+    
+    def __str__(self):
+        return f"{self.receipt.original_filename} - {self.field_type}: {self.final_value[:50] if self.final_value else 'N/A'}"
+    
+    @property
+    def final_value(self):
+        """Get the final value (corrected overrides extracted)"""
+        return self.corrected_value if self.is_corrected else self.normalized_value or self.raw_value
+    
+    @property
+    def final_bbox(self):
+        """Get the final bounding box (corrected overrides extracted)"""
+        if self.is_corrected and self.corrected_bbox_x1 is not None:
+            return {
+                'x1': self.corrected_bbox_x1,
+                'y1': self.corrected_bbox_y1,
+                'x2': self.corrected_bbox_x2,
+                'y2': self.corrected_bbox_y2,
+            }
+        return {
+            'x1': self.bbox_x1,
+            'y1': self.bbox_y1,
+            'x2': self.bbox_x2,
+            'y2': self.bbox_y2,
+        }
+    
+    @property
+    def has_bbox(self):
+        """Check if bounding box coordinates exist"""
+        return all(v is not None for v in [self.bbox_x1, self.bbox_y1, self.bbox_x2, self.bbox_y2])
+
+
+class FieldCorrectionHistory(BaseModel):
+    """
+    Audit trail for field corrections.
+    Stores previous values whenever a field is corrected for version history.
+    """
+    extracted_field = models.ForeignKey(
+        ExtractedField,
+        on_delete=models.CASCADE,
+        related_name='correction_history'
+    )
+    
+    # Version info
+    version = models.PositiveIntegerField()
+    
+    # Previous values before correction
+    previous_value = models.TextField(blank=True)
+    previous_bbox_x1 = models.FloatField(null=True, blank=True)
+    previous_bbox_y1 = models.FloatField(null=True, blank=True)
+    previous_bbox_x2 = models.FloatField(null=True, blank=True)
+    previous_bbox_y2 = models.FloatField(null=True, blank=True)
+    
+    # New values after correction
+    new_value = models.TextField(blank=True)
+    new_bbox_x1 = models.FloatField(null=True, blank=True)
+    new_bbox_y1 = models.FloatField(null=True, blank=True)
+    new_bbox_x2 = models.FloatField(null=True, blank=True)
+    new_bbox_y2 = models.FloatField(null=True, blank=True)
+    
+    # Correction metadata
+    correction_reason = models.TextField(blank=True)
+    corrected_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='field_corrections'
+    )
+    corrected_at = models.DateTimeField(auto_now_add=True)
+    
+    # Source of correction
+    correction_source = models.CharField(
+        max_length=30,
+        default='MANUAL',
+        help_text='MANUAL, AI_SUGGESTION, BATCH_UPDATE'
+    )
+    
+    class Meta:
+        ordering = ['-corrected_at']
+        verbose_name = 'Field Correction History'
+        verbose_name_plural = 'Field Correction Histories'
+        indexes = [
+            models.Index(fields=['extracted_field', 'version']),
+            models.Index(fields=['corrected_by', 'corrected_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.extracted_field.field_type} v{self.version} - {self.corrected_at}"
+
+
+class ReceiptCorrectionSummary(BaseModel):
+    """
+    Summary of all corrections made to a receipt.
+    Provides quick access to correction statistics and overall audit trail.
+    """
+    receipt = models.OneToOneField(
+        Receipt,
+        on_delete=models.CASCADE,
+        related_name='correction_summary'
+    )
+    
+    # Correction statistics
+    total_fields = models.PositiveIntegerField(default=0)
+    corrected_fields = models.PositiveIntegerField(default=0)
+    total_corrections = models.PositiveIntegerField(default=0)  # Including multiple corrections per field
+    
+    # First and last correction
+    first_corrected_at = models.DateTimeField(null=True, blank=True)
+    last_corrected_at = models.DateTimeField(null=True, blank=True)
+    
+    # Users involved
+    corrected_by_users = models.JSONField(default=list, blank=True)  # List of user IDs
+    
+    # Overall confidence improvement
+    original_avg_confidence = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        null=True,
+        blank=True
+    )
+    
+    class Meta:
+        verbose_name = 'Receipt Correction Summary'
+        verbose_name_plural = 'Receipt Correction Summaries'
+    
+    def __str__(self):
+        return f"{self.receipt.original_filename} - {self.corrected_fields}/{self.total_fields} corrected"
+    
+    def update_statistics(self):
+        """Update correction statistics based on current field data"""
+        fields = self.receipt.extracted_fields.all()
+        self.total_fields = fields.count()
+        self.corrected_fields = fields.filter(is_corrected=True).count()
+        
+        # Count total correction history entries
+        from django.db.models import Count
+        self.total_corrections = FieldCorrectionHistory.objects.filter(
+            extracted_field__receipt=self.receipt
+        ).count()
+        
+        # Get first and last correction times
+        history = FieldCorrectionHistory.objects.filter(
+            extracted_field__receipt=self.receipt
+        ).order_by('corrected_at')
+        
+        if history.exists():
+            self.first_corrected_at = history.first().corrected_at
+            self.last_corrected_at = history.last().corrected_at
+            
+            # Get unique correctors
+            corrector_ids = list(history.values_list('corrected_by_id', flat=True).distinct())
+            self.corrected_by_users = [str(uid) for uid in corrector_ids if uid]
+        
+        # Calculate original average confidence
+        from django.db.models import Avg
+        avg_conf = fields.aggregate(avg=Avg('confidence_score'))['avg']
+        self.original_avg_confidence = avg_conf
+        
+        self.save()
+
+
+# =================================================================
 # Project Management for Accounting
 # =================================================================
 

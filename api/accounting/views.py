@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.http import HttpResponse
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum, Q, Count, Min
 from django.utils import timezone
 from decimal import Decimal
@@ -25,7 +25,8 @@ from .models import (
     JournalEntry, JournalEntryLine, Contact, Invoice, InvoiceLine,
     Payment, PaymentAllocation, Expense, AccountType,
     Project, ProjectDocument, ProjectStatus,
-    Receipt, RecognitionStatus
+    Receipt, RecognitionStatus,
+    ExtractedField, ExtractedFieldType, FieldCorrectionHistory, ReceiptCorrectionSummary
 )
 from .serializers import (
     FiscalYearSerializer, AccountingPeriodSerializer, CurrencySerializer,
@@ -39,7 +40,9 @@ from .serializers import (
     ProjectUpdateSerializer, ProjectDocumentSerializer, LinkDocumentToProjectSerializer,
     ReceiptSerializer, ReceiptListSerializer, ReceiptUploadSerializer,
     BulkReceiptUploadSerializer, ReceiptClassifySerializer, BulkReceiptClassifySerializer,
-    BulkReceiptStatusUpdateSerializer
+    BulkReceiptStatusUpdateSerializer,
+    ExtractedFieldSerializer, ExtractedFieldListSerializer, FieldCorrectionHistorySerializer,
+    ReceiptCorrectSerializer, ReceiptWithFieldsSerializer, ReceiptCorrectionSummarySerializer
 )
 
 
@@ -1431,3 +1434,306 @@ class ReceiptViewSet(viewsets.ModelViewSet):
                 'confidence': confidence
             }
         return None
+
+    # ============================================
+    # Field Extraction & Correction Endpoints
+    # ============================================
+    
+    @action(detail=True, methods=['get'])
+    def fields(self, request, pk=None):
+        """
+        Get all extracted fields for a receipt with bounding boxes.
+        Returns fields grouped by type with visual coordinates for UI highlighting.
+        """
+        receipt = self.get_object()
+        fields = ExtractedField.objects.filter(receipt=receipt).order_by(
+            'page_number', 'field_type', 'created_at'
+        )
+        
+        serializer = ExtractedFieldSerializer(fields, many=True)
+        
+        # Group by field type for easier UI consumption
+        grouped = {}
+        for field in serializer.data:
+            field_type = field['field_type']
+            if field_type not in grouped:
+                grouped[field_type] = []
+            grouped[field_type].append(field)
+        
+        return Response({
+            'receipt_id': str(receipt.id),
+            'total_fields': fields.count(),
+            'fields': serializer.data,
+            'fields_by_type': grouped,
+            'correction_summary': self._get_correction_summary(receipt)
+        })
+    
+    @action(detail=True, methods=['put'])
+    def correct(self, request, pk=None):
+        """
+        Correct extracted fields with bounding box overrides.
+        Creates version history for audit trail.
+        
+        Request body:
+        {
+            "fields": [
+                {
+                    "field_id": "uuid",  // existing field to correct
+                    "value": "corrected value",
+                    "bounding_box": {"x1": 0.1, "y1": 0.2, "x2": 0.5, "y2": 0.3},
+                    "correction_reason": "OCR error"
+                },
+                {
+                    "field_type": "VENDOR",  // new field to create
+                    "field_name": "vendor_name",
+                    "value": "ABC Corp",
+                    "bounding_box": {"x1": 0.1, "y1": 0.2, "x2": 0.5, "y2": 0.3},
+                    "page_number": 1
+                }
+            ],
+            "correction_source": "UI",
+            "notes": "Manual correction by user"
+        }
+        """
+        from django.db import transaction
+        
+        receipt = self.get_object()
+        serializer = ReceiptCorrectSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        fields_data = serializer.validated_data['fields']
+        correction_source = serializer.validated_data.get('correction_source', 'UI')
+        notes = serializer.validated_data.get('notes', '')
+        
+        corrected_fields = []
+        created_fields = []
+        errors = []
+        
+        with transaction.atomic():
+            for field_data in fields_data:
+                try:
+                    field_id = field_data.get('field_id')
+                    
+                    if field_id:
+                        # Correct existing field
+                        result = self._correct_existing_field(
+                            receipt, field_id, field_data, request.user, 
+                            correction_source, notes
+                        )
+                        if result:
+                            corrected_fields.append(result)
+                    else:
+                        # Create new field
+                        result = self._create_new_field(
+                            receipt, field_data, request.user
+                        )
+                        if result:
+                            created_fields.append(result)
+                            
+                except Exception as e:
+                    errors.append({
+                        'field_id': str(field_data.get('field_id', 'new')),
+                        'field_type': field_data.get('field_type'),
+                        'error': str(e)
+                    })
+            
+            # Update or create correction summary
+            self._update_correction_summary(receipt, request.user)
+        
+        return Response({
+            'message': 'Fields corrected successfully',
+            'receipt_id': str(receipt.id),
+            'corrected_count': len(corrected_fields),
+            'created_count': len(created_fields),
+            'corrected_fields': ExtractedFieldSerializer(corrected_fields, many=True).data,
+            'created_fields': ExtractedFieldSerializer(created_fields, many=True).data,
+            'errors': errors if errors else None,
+            'correction_summary': self._get_correction_summary(receipt)
+        })
+    
+    @action(detail=True, methods=['get'])
+    def correction_history(self, request, pk=None):
+        """
+        Get full correction history for a receipt's fields.
+        Supports filtering by field_id and date range.
+        """
+        receipt = self.get_object()
+        
+        # Get history for all fields of this receipt
+        field_ids = ExtractedField.objects.filter(receipt=receipt).values_list('id', flat=True)
+        history = FieldCorrectionHistory.objects.filter(
+            field_id__in=field_ids
+        ).select_related('corrected_by').order_by('-created_at')
+        
+        # Filter by specific field if requested
+        field_filter = request.query_params.get('field_id')
+        if field_filter:
+            history = history.filter(field_id=field_filter)
+        
+        # Filter by date range
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        if date_from:
+            history = history.filter(created_at__date__gte=date_from)
+        if date_to:
+            history = history.filter(created_at__date__lte=date_to)
+        
+        serializer = FieldCorrectionHistorySerializer(history, many=True)
+        
+        return Response({
+            'receipt_id': str(receipt.id),
+            'total_corrections': history.count(),
+            'history': serializer.data
+        })
+    
+    @action(detail=True, methods=['post'], url_path='fields/bulk-create')
+    def bulk_create_fields(self, request, pk=None):
+        """
+        Bulk create extracted fields from OCR processing.
+        Used by OCR integration to populate fields after processing.
+        """
+        receipt = self.get_object()
+        serializer = ExtractedFieldListSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        fields_data = serializer.validated_data['fields']
+        created_fields = []
+        
+        for field_data in fields_data:
+            field = ExtractedField.objects.create(
+                receipt=receipt,
+                field_type=field_data['field_type'],
+                field_name=field_data.get('field_name', ''),
+                raw_value=field_data.get('raw_value', ''),
+                normalized_value=field_data.get('normalized_value', ''),
+                confidence_score=field_data.get('confidence_score'),
+                bbox_x1=field_data.get('bbox_x1'),
+                bbox_y1=field_data.get('bbox_y1'),
+                bbox_x2=field_data.get('bbox_x2'),
+                bbox_y2=field_data.get('bbox_y2'),
+                bbox_unit=field_data.get('bbox_unit', 'ratio'),
+                page_number=field_data.get('page_number', 1),
+            )
+            created_fields.append(field)
+        
+        # Create initial correction summary
+        self._update_correction_summary(receipt, None)
+        
+        return Response({
+            'message': f'Created {len(created_fields)} fields',
+            'receipt_id': str(receipt.id),
+            'fields': ExtractedFieldSerializer(created_fields, many=True).data
+        }, status=status.HTTP_201_CREATED)
+    
+    def _correct_existing_field(self, receipt, field_id, field_data, user, correction_source, notes):
+        """Correct an existing extracted field and create history entry."""
+        try:
+            field = ExtractedField.objects.get(id=field_id, receipt=receipt)
+        except ExtractedField.DoesNotExist:
+            raise ValueError(f"Field {field_id} not found for this receipt")
+        
+        # Store previous values for history
+        prev_value = field.corrected_value if field.is_corrected else field.raw_value
+        prev_bbox = {
+            'x1': field.corrected_bbox_x1 or field.bbox_x1,
+            'y1': field.corrected_bbox_y1 or field.bbox_y1,
+            'x2': field.corrected_bbox_x2 or field.bbox_x2,
+            'y2': field.corrected_bbox_y2 or field.bbox_y2,
+        }
+        
+        # Create history entry
+        FieldCorrectionHistory.objects.create(
+            field=field,
+            version=field.version,
+            previous_value=prev_value,
+            new_value=field_data.get('value', ''),
+            previous_bbox_x1=prev_bbox['x1'],
+            previous_bbox_y1=prev_bbox['y1'],
+            previous_bbox_x2=prev_bbox['x2'],
+            previous_bbox_y2=prev_bbox['y2'],
+            new_bbox_x1=field_data.get('bounding_box', {}).get('x1'),
+            new_bbox_y1=field_data.get('bounding_box', {}).get('y1'),
+            new_bbox_x2=field_data.get('bounding_box', {}).get('x2'),
+            new_bbox_y2=field_data.get('bounding_box', {}).get('y2'),
+            correction_reason=field_data.get('correction_reason', ''),
+            corrected_by=user,
+            correction_source=correction_source,
+            notes=notes
+        )
+        
+        # Update field with corrections
+        field.is_corrected = True
+        field.corrected_value = field_data.get('value', field.corrected_value or field.raw_value)
+        field.corrected_by = user
+        field.corrected_at = timezone.now()
+        field.version += 1
+        
+        # Update bounding box if provided
+        bbox = field_data.get('bounding_box')
+        if bbox:
+            field.corrected_bbox_x1 = bbox.get('x1')
+            field.corrected_bbox_y1 = bbox.get('y1')
+            field.corrected_bbox_x2 = bbox.get('x2')
+            field.corrected_bbox_y2 = bbox.get('y2')
+        
+        field.save()
+        return field
+    
+    def _create_new_field(self, receipt, field_data, user):
+        """Create a new extracted field from manual entry."""
+        bbox = field_data.get('bounding_box', {})
+        
+        field = ExtractedField.objects.create(
+            receipt=receipt,
+            field_type=field_data['field_type'],
+            field_name=field_data.get('field_name', ''),
+            raw_value='',  # No raw value for manually created fields
+            normalized_value=field_data.get('value', ''),
+            confidence_score=Decimal('1.0'),  # Manual entry = 100% confidence
+            bbox_x1=bbox.get('x1'),
+            bbox_y1=bbox.get('y1'),
+            bbox_x2=bbox.get('x2'),
+            bbox_y2=bbox.get('y2'),
+            bbox_unit=field_data.get('bbox_unit', 'ratio'),
+            page_number=field_data.get('page_number', 1),
+            is_corrected=True,
+            corrected_value=field_data.get('value', ''),
+            corrected_by=user,
+            corrected_at=timezone.now(),
+        )
+        return field
+    
+    def _update_correction_summary(self, receipt, user):
+        """Update or create correction summary for a receipt."""
+        total_fields = ExtractedField.objects.filter(receipt=receipt).count()
+        corrected_fields = ExtractedField.objects.filter(receipt=receipt, is_corrected=True).count()
+        total_corrections = FieldCorrectionHistory.objects.filter(
+            field__receipt=receipt
+        ).count()
+        
+        summary, created = ReceiptCorrectionSummary.objects.update_or_create(
+            receipt=receipt,
+            defaults={
+                'total_fields': total_fields,
+                'corrected_fields': corrected_fields,
+                'total_corrections': total_corrections,
+                'last_correction_at': timezone.now() if corrected_fields > 0 else None,
+                'last_corrected_by': user,
+            }
+        )
+        return summary
+    
+    def _get_correction_summary(self, receipt):
+        """Get correction summary for a receipt."""
+        try:
+            summary = ReceiptCorrectionSummary.objects.get(receipt=receipt)
+            return ReceiptCorrectionSummarySerializer(summary).data
+        except ReceiptCorrectionSummary.DoesNotExist:
+            return {
+                'total_fields': 0,
+                'corrected_fields': 0,
+                'total_corrections': 0,
+                'correction_rate': 0,
+                'last_correction_at': None,
+                'last_corrected_by': None
+            }

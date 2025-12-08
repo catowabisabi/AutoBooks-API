@@ -4,7 +4,8 @@ from .models import (
     FiscalYear, AccountingPeriod, Currency, TaxRate, Account,
     JournalEntry, JournalEntryLine, Contact, Invoice, InvoiceLine,
     Payment, PaymentAllocation, Expense, Project, ProjectDocument,
-    ProjectStatus, Receipt, RecognitionStatus
+    ProjectStatus, Receipt, RecognitionStatus,
+    ExtractedField, ExtractedFieldType, FieldCorrectionHistory, ReceiptCorrectionSummary
 )
 
 
@@ -706,3 +707,214 @@ class BulkUploadProgressSerializer(serializers.Serializer):
     unrecognized = serializers.IntegerField()
     failed = serializers.IntegerField()
     results = ReceiptProcessingResultSerializer(many=True)
+
+
+# =================================================================
+# Extracted Field Serializers with Bounding Box Support
+# =================================================================
+
+class BoundingBoxSerializer(serializers.Serializer):
+    """Serializer for bounding box coordinates"""
+    x1 = serializers.FloatField(min_value=0, help_text='Left coordinate')
+    y1 = serializers.FloatField(min_value=0, help_text='Top coordinate')
+    x2 = serializers.FloatField(min_value=0, help_text='Right coordinate')
+    y2 = serializers.FloatField(min_value=0, help_text='Bottom coordinate')
+    
+    def validate(self, data):
+        if data.get('x2', 0) < data.get('x1', 0):
+            raise serializers.ValidationError(_("x2 must be greater than or equal to x1"))
+        if data.get('y2', 0) < data.get('y1', 0):
+            raise serializers.ValidationError(_("y2 must be greater than or equal to y1"))
+        return data
+
+
+class ExtractedFieldSerializer(serializers.ModelSerializer):
+    """Full serializer for extracted field with bounding box"""
+    final_value = serializers.CharField(read_only=True)
+    final_bbox = serializers.DictField(read_only=True)
+    has_bbox = serializers.BooleanField(read_only=True)
+    corrected_by_name = serializers.CharField(source='corrected_by.full_name', read_only=True)
+    
+    class Meta:
+        model = ExtractedField
+        fields = [
+            'id', 'receipt', 'field_type', 'field_name',
+            'raw_value', 'normalized_value', 'data_type',
+            'bbox_x1', 'bbox_y1', 'bbox_x2', 'bbox_y2', 'bbox_unit', 'page_number',
+            'confidence_score',
+            'is_corrected', 'corrected_value',
+            'corrected_bbox_x1', 'corrected_bbox_y1', 'corrected_bbox_x2', 'corrected_bbox_y2',
+            'corrected_by', 'corrected_by_name', 'corrected_at',
+            'version',
+            'final_value', 'final_bbox', 'has_bbox',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'receipt', 'version', 'corrected_by', 'corrected_at',
+            'created_at', 'updated_at'
+        ]
+
+
+class ExtractedFieldListSerializer(serializers.ModelSerializer):
+    """Simplified serializer for field lists"""
+    final_value = serializers.CharField(read_only=True)
+    final_bbox = serializers.DictField(read_only=True)
+    
+    class Meta:
+        model = ExtractedField
+        fields = [
+            'id', 'field_type', 'field_name',
+            'final_value', 'confidence_score',
+            'is_corrected', 'version',
+            'final_bbox'
+        ]
+
+
+class FieldCorrectionHistorySerializer(serializers.ModelSerializer):
+    """Serializer for field correction history (audit trail)"""
+    corrected_by_name = serializers.CharField(source='corrected_by.full_name', read_only=True)
+    field_type = serializers.CharField(source='extracted_field.field_type', read_only=True)
+    field_name = serializers.CharField(source='extracted_field.field_name', read_only=True)
+    
+    class Meta:
+        model = FieldCorrectionHistory
+        fields = [
+            'id', 'extracted_field', 'field_type', 'field_name', 'version',
+            'previous_value', 'previous_bbox_x1', 'previous_bbox_y1',
+            'previous_bbox_x2', 'previous_bbox_y2',
+            'new_value', 'new_bbox_x1', 'new_bbox_y1',
+            'new_bbox_x2', 'new_bbox_y2',
+            'correction_reason', 'corrected_by', 'corrected_by_name',
+            'corrected_at', 'correction_source'
+        ]
+        read_only_fields = ['id', 'corrected_at']
+
+
+class ReceiptCorrectionSummarySerializer(serializers.ModelSerializer):
+    """Serializer for receipt correction summary"""
+    
+    class Meta:
+        model = ReceiptCorrectionSummary
+        fields = [
+            'total_fields', 'corrected_fields', 'total_corrections',
+            'first_corrected_at', 'last_corrected_at',
+            'corrected_by_users', 'original_avg_confidence'
+        ]
+
+
+class FieldCorrectionInputSerializer(serializers.Serializer):
+    """Input serializer for correcting a single field"""
+    field_id = serializers.UUIDField(required=False, help_text='ID of existing field to correct')
+    field_type = serializers.ChoiceField(
+        choices=ExtractedFieldType.choices(),
+        required=False,
+        help_text='Type of field (required for new fields)'
+    )
+    field_name = serializers.CharField(max_length=100, required=False)
+    
+    # New value
+    value = serializers.CharField(allow_blank=True, required=False)
+    
+    # Bounding box (optional)
+    bbox = BoundingBoxSerializer(required=False, allow_null=True)
+    
+    # Correction metadata
+    reason = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        if not data.get('field_id') and not data.get('field_type'):
+            raise serializers.ValidationError(
+                _("Either field_id (for existing field) or field_type (for new field) is required")
+            )
+        return data
+
+
+class ReceiptCorrectSerializer(serializers.Serializer):
+    """
+    Main serializer for PUT /receipts/{id}/correct endpoint.
+    Allows correcting multiple fields at once with version history.
+    """
+    fields = serializers.ListField(
+        child=FieldCorrectionInputSerializer(),
+        min_length=1,
+        help_text='List of field corrections to apply'
+    )
+    correction_source = serializers.ChoiceField(
+        choices=['MANUAL', 'AI_SUGGESTION', 'BATCH_UPDATE'],
+        default='MANUAL'
+    )
+    notes = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate_fields(self, value):
+        # Validate field_ids if provided
+        field_ids = [f.get('field_id') for f in value if f.get('field_id')]
+        if field_ids:
+            existing_count = ExtractedField.objects.filter(id__in=field_ids).count()
+            if existing_count != len(field_ids):
+                raise serializers.ValidationError(
+                    _("Some field IDs were not found")
+                )
+        return value
+
+
+class BulkFieldCorrectionSerializer(serializers.Serializer):
+    """Serializer for bulk field corrections across multiple receipts"""
+    corrections = serializers.ListField(
+        child=serializers.DictField(),
+        min_length=1
+    )
+    correction_source = serializers.ChoiceField(
+        choices=['MANUAL', 'AI_SUGGESTION', 'BATCH_UPDATE'],
+        default='BATCH_UPDATE'
+    )
+    
+    def validate_corrections(self, value):
+        for i, correction in enumerate(value):
+            if 'receipt_id' not in correction:
+                raise serializers.ValidationError(
+                    _("Each correction must include receipt_id")
+                )
+            if 'fields' not in correction or not correction['fields']:
+                raise serializers.ValidationError(
+                    _("Each correction must include at least one field")
+                )
+        return value
+
+
+class ReceiptWithFieldsSerializer(serializers.ModelSerializer):
+    """Receipt serializer that includes extracted fields with bounding boxes"""
+    uploaded_by_name = serializers.CharField(source='uploaded_by.full_name', read_only=True)
+    classified_by_name = serializers.CharField(source='classified_by.full_name', read_only=True)
+    extracted_fields = ExtractedFieldListSerializer(many=True, read_only=True)
+    correction_summary = ReceiptCorrectionSummarySerializer(read_only=True)
+    file_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Receipt
+        fields = [
+            'id', 'file', 'file_url', 'original_filename', 'file_size', 'mime_type',
+            'recognition_status', 'confidence_score', 'confidence_threshold',
+            'vendor_name', 'receipt_date', 'total_amount', 'currency_code', 'tax_amount',
+            'manual_category', 'manual_vendor', 'manual_amount', 'manual_date',
+            'classification_notes', 'classified_by', 'classified_by_name', 'classified_at',
+            'project', 'expense',
+            'uploaded_by', 'uploaded_by_name', 'batch_id', 'tags',
+            'extracted_fields', 'correction_summary',
+            'is_active', 'created_at', 'updated_at'
+        ]
+    
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return None
+
+
+class FieldExtractionResultSerializer(serializers.Serializer):
+    """Response serializer for field extraction/correction results"""
+    receipt_id = serializers.UUIDField()
+    fields_updated = serializers.IntegerField()
+    fields_created = serializers.IntegerField()
+    correction_history_created = serializers.IntegerField()
+    fields = ExtractedFieldListSerializer(many=True)
+
