@@ -1,7 +1,7 @@
 """
 Accounting Module Models
 ========================
-Complete double-entry bookkeeping system for ERP.
+Complete double-entry bookkeeping system for ERP with multi-tenant support.
 """
 
 from enum import Enum
@@ -10,6 +10,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from core.models import BaseModel
+from core.tenants.managers import TenantAwareManager, UnscopedManager
 
 
 # =================================================================
@@ -117,11 +118,21 @@ class PaymentMethod(str, Enum):
 
 class FiscalYear(BaseModel):
     """會計年度"""
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='fiscal_years',
+        null=True,  # Temporarily nullable for migration
+        blank=True
+    )
     name = models.CharField(max_length=100)  # e.g., "FY 2024"
     start_date = models.DateField()
     end_date = models.DateField()
     is_active = models.BooleanField(default=True)
     is_closed = models.BooleanField(default=False)
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
     
     class Meta:
         ordering = ['-start_date']
@@ -134,12 +145,22 @@ class FiscalYear(BaseModel):
 
 class AccountingPeriod(BaseModel):
     """會計期間 (月/季)"""
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='accounting_periods',
+        null=True,
+        blank=True
+    )
     fiscal_year = models.ForeignKey(FiscalYear, on_delete=models.CASCADE, related_name='periods')
     name = models.CharField(max_length=100)  # e.g., "January 2024"
     period_number = models.PositiveIntegerField()  # 1-12 for months
     start_date = models.DateField()
     end_date = models.DateField()
     is_closed = models.BooleanField(default=False)
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
     
     class Meta:
         ordering = ['fiscal_year', 'period_number']
@@ -151,14 +172,25 @@ class AccountingPeriod(BaseModel):
 
 class Currency(BaseModel):
     """貨幣"""
-    code = models.CharField(max_length=3, unique=True)  # ISO 4217
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='currencies',
+        null=True,
+        blank=True
+    )
+    code = models.CharField(max_length=3)  # ISO 4217
     name = models.CharField(max_length=100)
     symbol = models.CharField(max_length=10)
     exchange_rate = models.DecimalField(max_digits=15, decimal_places=6, default=Decimal('1.000000'))
     is_base = models.BooleanField(default=False)
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         verbose_name_plural = 'Currencies'
+        unique_together = ['tenant', 'code']
     
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -166,10 +198,20 @@ class Currency(BaseModel):
 
 class TaxRate(BaseModel):
     """稅率"""
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='tax_rates',
+        null=True,
+        blank=True
+    )
     name = models.CharField(max_length=100)  # e.g., "GST 5%"
     rate = models.DecimalField(max_digits=5, decimal_places=2)  # Percentage
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
     
     def __str__(self):
         return f"{self.name} ({self.rate}%)"
@@ -177,7 +219,14 @@ class TaxRate(BaseModel):
 
 class Account(BaseModel):
     """會計科目表 (Chart of Accounts)"""
-    code = models.CharField(max_length=20, unique=True)  # e.g., "1000", "1100"
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='accounts',
+        null=True,
+        blank=True
+    )
+    code = models.CharField(max_length=20)  # e.g., "1000", "1100"
     name = models.CharField(max_length=200)
     account_type = models.CharField(max_length=20, choices=AccountType.choices())
     account_subtype = models.CharField(max_length=30, choices=AccountSubType.choices(), blank=True)
@@ -191,8 +240,12 @@ class Account(BaseModel):
     opening_balance = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     current_balance = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         ordering = ['code']
+        unique_together = ['tenant', 'code']
     
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -209,7 +262,14 @@ class Account(BaseModel):
 
 class JournalEntry(BaseModel):
     """日記帳分錄"""
-    entry_number = models.CharField(max_length=50, unique=True)
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='journal_entries',
+        null=True,
+        blank=True
+    )
+    entry_number = models.CharField(max_length=50)  # unique per tenant
     date = models.DateField()
     description = models.TextField()
     reference = models.CharField(max_length=100, blank=True)  # External reference
@@ -229,9 +289,13 @@ class JournalEntry(BaseModel):
     total_debit = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     total_credit = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         ordering = ['-date', '-created_at']
         verbose_name_plural = 'Journal Entries'
+        unique_together = ['tenant', 'entry_number']
     
     def __str__(self):
         return f"{self.entry_number} - {self.date}"
@@ -275,6 +339,13 @@ class Contact(BaseModel):
         ('BOTH', 'Both'),
     ]
     
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='contacts',
+        null=True,
+        blank=True
+    )
     contact_type = models.CharField(max_length=20, choices=CONTACT_TYPE_CHOICES)
     company_name = models.CharField(max_length=200, blank=True)
     contact_name = models.CharField(max_length=200)
@@ -302,6 +373,9 @@ class Contact(BaseModel):
     is_active = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     def __str__(self):
         return self.company_name or self.contact_name
 
@@ -317,8 +391,15 @@ class Invoice(BaseModel):
         ('PURCHASE', 'Purchase Invoice'),  # 採購發票
     ]
     
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='invoices',
+        null=True,
+        blank=True
+    )
     invoice_type = models.CharField(max_length=20, choices=INVOICE_TYPE_CHOICES)
-    invoice_number = models.CharField(max_length=50, unique=True)
+    invoice_number = models.CharField(max_length=50)  # unique per tenant
     contact = models.ForeignKey(Contact, on_delete=models.PROTECT, related_name='invoices')
     
     issue_date = models.DateField()
@@ -349,8 +430,12 @@ class Invoice(BaseModel):
     # Audit
     created_by = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name='invoices_created')
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         ordering = ['-issue_date', '-created_at']
+        unique_together = ['tenant', 'invoice_number']
     
     def __str__(self):
         return f"{self.invoice_number} - {self.contact}"
@@ -394,8 +479,15 @@ class Payment(BaseModel):
         ('MAKE', 'Payment Made'),          # 付款
     ]
     
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='payments',
+        null=True,
+        blank=True
+    )
     payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES)
-    payment_number = models.CharField(max_length=50, unique=True)
+    payment_number = models.CharField(max_length=50)  # unique per tenant
     contact = models.ForeignKey(Contact, on_delete=models.PROTECT, related_name='payments')
     
     date = models.DateField()
@@ -420,8 +512,12 @@ class Payment(BaseModel):
     # Audit
     created_by = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name='payments_created')
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         ordering = ['-date', '-created_at']
+        unique_together = ['tenant', 'payment_number']
     
     def __str__(self):
         return f"{self.payment_number} - {self.amount}"
@@ -443,7 +539,14 @@ class PaymentAllocation(BaseModel):
 
 class Expense(BaseModel):
     """費用報銷"""
-    expense_number = models.CharField(max_length=50, unique=True)
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='expenses',
+        null=True,
+        blank=True
+    )
+    expense_number = models.CharField(max_length=50)  # unique per tenant
     employee = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name='expenses')
     
     date = models.DateField()
@@ -478,8 +581,12 @@ class Expense(BaseModel):
     
     notes = models.TextField(blank=True)
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         ordering = ['-date', '-created_at']
+        unique_together = ['tenant', 'expense_number']
     
     def __str__(self):
         return f"{self.expense_number} - {self.description[:50]}"
@@ -491,6 +598,13 @@ class Expense(BaseModel):
 
 class BankStatement(BaseModel):
     """銀行對帳單"""
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='bank_statements',
+        null=True,
+        blank=True
+    )
     bank_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name='bank_statements')
     statement_date = models.DateField()
     
@@ -501,13 +615,23 @@ class BankStatement(BaseModel):
     reconciled_at = models.DateTimeField(null=True, blank=True)
     reconciled_by = models.ForeignKey('users.User', on_delete=models.PROTECT, null=True, blank=True)
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         ordering = ['-statement_date']
-        unique_together = ['bank_account', 'statement_date']
+        unique_together = ['tenant', 'bank_account', 'statement_date']
 
 
 class BankTransaction(BaseModel):
     """銀行交易"""
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='bank_transactions',
+        null=True,
+        blank=True
+    )
     statement = models.ForeignKey(BankStatement, on_delete=models.CASCADE, related_name='transactions')
     date = models.DateField()
     description = models.CharField(max_length=500)
@@ -519,6 +643,9 @@ class BankTransaction(BaseModel):
     is_matched = models.BooleanField(default=False)
     matched_journal_line = models.ForeignKey(JournalEntryLine, on_delete=models.SET_NULL, null=True, blank=True)
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         ordering = ['date']
 
@@ -529,7 +656,14 @@ class BankTransaction(BaseModel):
 
 class APIKeyStore(BaseModel):
     """API Key 安全存儲"""
-    name = models.CharField(max_length=100, unique=True)  # e.g., "OPENAI_API_KEY"
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='api_keys',
+        null=True,
+        blank=True
+    )
+    name = models.CharField(max_length=100)  # e.g., "OPENAI_API_KEY" - unique per tenant
     encrypted_value = models.TextField()  # Encrypted API key
     provider = models.CharField(max_length=50)  # e.g., "openai", "google", "deepseek"
     is_active = models.BooleanField(default=True)
@@ -538,9 +672,13 @@ class APIKeyStore(BaseModel):
     
     created_by = models.ForeignKey('users.User', on_delete=models.PROTECT)
     
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
     class Meta:
         verbose_name = 'API Key'
         verbose_name_plural = 'API Keys'
+        unique_together = ['tenant', 'name']
     
     def __str__(self):
         return f"{self.name} ({self.provider})"

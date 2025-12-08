@@ -10,3 +10,21 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+# Import tenant models for easy access
+from core.tenants.models import Tenant, TenantMembership, TenantInvitation, TenantRole
+from core.tenants.base import TenantAwareModel
+from core.tenants.managers import TenantAwareManager, get_current_tenant, set_current_tenant
+
+__all__ = [
+    'BaseModel',
+    'Tenant',
+    'TenantMembership',
+    'TenantInvitation',
+    'TenantRole',
+    'TenantAwareModel',
+    'TenantAwareManager',
+    'get_current_tenant',
+    'set_current_tenant',
+]

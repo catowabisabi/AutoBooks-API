@@ -58,6 +58,9 @@ urlpatterns = [
     
     # Business Operations Module
     path('api/v1/business/', include('business.urls')),
+    
+    # Tenant Management
+    path('api/v1/', include('core.tenants.urls')),
 ]
 
 # Serve media files in development
