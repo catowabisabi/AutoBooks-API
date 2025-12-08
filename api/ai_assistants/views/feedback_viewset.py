@@ -8,7 +8,8 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Count, Avg, Q, Sum, F
+from django.db import models
+from django.db.models import Count, Avg, Q, Sum, F, Max
 from django.db.models.functions import TruncDate, TruncWeek
 from django.utils import timezone
 import uuid
