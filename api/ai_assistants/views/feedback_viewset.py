@@ -8,16 +8,30 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Count, Avg, Q
+from django.db.models import Count, Avg, Q, Sum, F
+from django.db.models.functions import TruncDate, TruncWeek
 from django.utils import timezone
 import uuid
+from datetime import timedelta
 
-from .models_feedback import AIFeedback, AIResultLog, AIFeedbackType
-from .serializers.feedback_serializers import (
+from ..models_feedback import (
+    AIFeedback, AIResultLog, AIFeedbackType,
+    AIRequestLog, VectorSearchLog, KnowledgeGapLog, AIUsageSummary
+)
+from ..serializers.feedback_serializers import (
     AIFeedbackSerializer,
     AIFeedbackCreateSerializer,
     AIResultLogSerializer,
     AIResultLogCreateSerializer,
+    AIRequestLogSerializer,
+    AIRequestLogCreateSerializer,
+    VectorSearchLogSerializer,
+    VectorSearchLogCreateSerializer,
+    KnowledgeGapLogSerializer,
+    KnowledgeGapCreateSerializer,
+    KnowledgeGapResolveSerializer,
+    AIUsageSummarySerializer,
+    RAGObservabilityDashboardSerializer,
 )
 
 
