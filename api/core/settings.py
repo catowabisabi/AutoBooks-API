@@ -57,6 +57,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'core.tenants.middleware.TenantMiddleware',  # Multi-tenant context
+    'core.subscription_middleware.SubscriptionMiddleware',  # Subscription feature restrictions
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

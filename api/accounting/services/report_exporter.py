@@ -169,6 +169,8 @@ class ReportExporterService:
             row = self._excel_balance_sheet(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
         elif report.report_type == ReportType.GENERAL_LEDGER.value:
             row = self._excel_general_ledger(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
+        elif report.report_type == ReportType.SUB_LEDGER.value:
+            row = self._excel_sub_ledger(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
         elif report.report_type == ReportType.TRIAL_BALANCE.value:
             row = self._excel_trial_balance(ws, data, row, subheader_font, money_format, thin_border, header_fill, Font)
         elif report.report_type == ReportType.EXPENSE_REPORT.value:
@@ -411,6 +413,71 @@ class ReportExporterService:
         
         return row + 2
     
+    def _excel_sub_ledger(self, ws, data, row, subheader_font, money_format, border, header_fill, Font):
+        """Write sub-ledger (by contact) to Excel worksheet"""
+        # Summary info
+        ws.cell(row=row, column=1, value=f"Ledger Type: {data.get('ledger_type', 'all').title()}")
+        row += 1
+        ws.cell(row=row, column=1, value=f"Total Contacts: {data.get('contact_count', 0)}")
+        ws.cell(row=row, column=3, value=f"Total Entries: {data.get('entry_count', 0)}")
+        row += 2
+        
+        for contact in data.get('contacts', []):
+            # Contact header
+            contact_header = f"{contact['contact_name']} ({contact['contact_type']})"
+            if contact.get('linked_account_code'):
+                contact_header += f" - {contact['linked_account_code']}"
+            ws.cell(row=row, column=1, value=contact_header).font = subheader_font
+            row += 1
+            ws.cell(row=row, column=1, value=f"Opening Balance: {contact['opening_balance']:,.2f}")
+            row += 1
+            
+            # Column headers
+            headers = ['Date', 'Entry #', 'Description', 'Reference', 'Debit', 'Credit', 'Balance']
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=row, column=col, value=header)
+                cell.font = subheader_font
+                cell.fill = header_fill
+            row += 1
+            
+            # Entries
+            for entry in contact.get('entries', []):
+                ws.cell(row=row, column=1, value=entry.get('date', ''))
+                ws.cell(row=row, column=2, value=entry.get('entry_number', ''))
+                ws.cell(row=row, column=3, value=entry.get('description', ''))
+                ws.cell(row=row, column=4, value=entry.get('reference', ''))
+                cell = ws.cell(row=row, column=5, value=entry.get('debit', 0))
+                cell.number_format = money_format
+                cell = ws.cell(row=row, column=6, value=entry.get('credit', 0))
+                cell.number_format = money_format
+                cell = ws.cell(row=row, column=7, value=entry.get('balance', 0))
+                cell.number_format = money_format
+                row += 1
+            
+            # Contact totals
+            ws.cell(row=row, column=3, value='Totals:').font = subheader_font
+            cell = ws.cell(row=row, column=5, value=contact.get('total_debits', 0))
+            cell.number_format = money_format
+            cell.font = subheader_font
+            cell = ws.cell(row=row, column=6, value=contact.get('total_credits', 0))
+            cell.number_format = money_format
+            cell.font = subheader_font
+            cell = ws.cell(row=row, column=7, value=contact.get('closing_balance', 0))
+            cell.number_format = money_format
+            cell.font = subheader_font
+            row += 2
+        
+        # Grand totals
+        ws.cell(row=row, column=3, value='GRAND TOTALS:').font = Font(bold=True, size=12)
+        cell = ws.cell(row=row, column=5, value=data.get('total_debits', 0))
+        cell.number_format = money_format
+        cell.font = Font(bold=True, size=12)
+        cell = ws.cell(row=row, column=6, value=data.get('total_credits', 0))
+        cell.number_format = money_format
+        cell.font = Font(bold=True, size=12)
+        
+        return row + 2
+    
     def _excel_expense_report(self, ws, data, row, subheader_font, money_format, border, header_fill, Font):
         """Write expense report to Excel worksheet"""
         # Headers
@@ -476,6 +543,8 @@ class ReportExporterService:
             self._word_balance_sheet(doc, data)
         elif report.report_type == ReportType.GENERAL_LEDGER.value:
             self._word_general_ledger(doc, data)
+        elif report.report_type == ReportType.SUB_LEDGER.value:
+            self._word_sub_ledger(doc, data)
         elif report.report_type == ReportType.TRIAL_BALANCE.value:
             self._word_trial_balance(doc, data)
         elif report.report_type == ReportType.EXPENSE_REPORT.value:
@@ -556,6 +625,49 @@ class ReportExporterService:
                     row[4].text = f"{entry.get('credit', 0):,.2f}"
             
             doc.add_paragraph(f"Closing Balance: {account['closing_balance']:,.2f}")
+    
+    def _word_sub_ledger(self, doc, data):
+        """Write sub-ledger (by contact) to Word document"""
+        doc.add_heading('Sub-Ledger Report', level=1)
+        
+        doc.add_paragraph(f"Ledger Type: {data.get('ledger_type', 'all').title()}")
+        doc.add_paragraph(f"Total Contacts: {data.get('contact_count', 0)}")
+        doc.add_paragraph(f"Total Entries: {data.get('entry_count', 0)}")
+        doc.add_paragraph()
+        
+        for contact in data.get('contacts', []):
+            contact_header = f"{contact['contact_name']} ({contact['contact_type']})"
+            if contact.get('linked_account_code'):
+                contact_header += f" - {contact['linked_account_code']}"
+            doc.add_heading(contact_header, level=2)
+            doc.add_paragraph(f"Opening Balance: {contact['opening_balance']:,.2f}")
+            
+            if contact.get('entries'):
+                table = doc.add_table(rows=1, cols=6)
+                table.style = 'Table Grid'
+                hdr_cells = table.rows[0].cells
+                headers = ['Date', 'Entry #', 'Description', 'Debit', 'Credit', 'Balance']
+                for i, header in enumerate(headers):
+                    hdr_cells[i].text = header
+                
+                for entry in contact['entries'][:20]:  # Limit to 20 entries per contact in Word
+                    row = table.add_row().cells
+                    row[0].text = entry.get('date', '')
+                    row[1].text = entry.get('entry_number', '')
+                    row[2].text = entry.get('description', '')[:40]
+                    row[3].text = f"{entry.get('debit', 0):,.2f}"
+                    row[4].text = f"{entry.get('credit', 0):,.2f}"
+                    row[5].text = f"{entry.get('balance', 0):,.2f}"
+                
+                if len(contact['entries']) > 20:
+                    doc.add_paragraph(f"... and {len(contact['entries']) - 20} more entries")
+            
+            doc.add_paragraph(f"Closing Balance: {contact['closing_balance']:,.2f}")
+            doc.add_paragraph()
+        
+        doc.add_heading('Summary', level=2)
+        doc.add_paragraph(f"Total Debits: {data.get('total_debits', 0):,.2f}")
+        doc.add_paragraph(f"Total Credits: {data.get('total_credits', 0):,.2f}")
     
     def _word_trial_balance(self, doc, data):
         """Write trial balance to Word document"""

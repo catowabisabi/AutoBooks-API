@@ -640,33 +640,174 @@ class ReportGeneratorService:
         comparison_period_start: Optional[date],
         comparison_period_end: Optional[date]
     ) -> Dict:
-        """Generate Sub-Ledger (明細帳) - detailed by vendor/customer"""
+        """Generate Sub-Ledger (明細帳) - detailed by vendor/customer contact"""
         
-        # Group by contact (vendor/customer)
-        entries_filter = Q(
-            journal_entry__date__gte=period_start,
-            journal_entry__date__lte=period_end,
-            journal_entry__status=TransactionStatus.POSTED.value
-        )
-        
+        # Get relevant contacts based on filters
+        contact_filter = Q(is_active=True)
         if self.tenant_id:
-            entries_filter &= Q(journal_entry__tenant_id=self.tenant_id)
+            contact_filter &= Q(tenant_id=self.tenant_id)
         
+        # Filter by vendor/customer type
+        ledger_type = 'all'  # Default to both
         if filters:
             if filters.get('vendor_ids'):
-                entries_filter &= Q(
-                    account__vendor_contacts__id__in=filters['vendor_ids']
-                ) | Q(
-                    journal_entry__reference__in=[str(vid) for vid in filters['vendor_ids']]
-                )
-            if filters.get('account_ids'):
-                entries_filter &= Q(account_id__in=filters['account_ids'])
+                contact_filter &= Q(id__in=filters['vendor_ids'])
+                ledger_type = 'vendor'
+            if filters.get('customer_ids'):
+                contact_filter &= Q(id__in=filters['customer_ids'])
+                ledger_type = 'customer'
+            if filters.get('ledger_type'):
+                ledger_type = filters['ledger_type']
+                if ledger_type == 'vendor':
+                    contact_filter &= Q(contact_type__in=['VENDOR', 'BOTH'])
+                elif ledger_type == 'customer':
+                    contact_filter &= Q(contact_type__in=['CUSTOMER', 'BOTH'])
         
-        # Use the same structure as general ledger but group differently
-        return self._generate_general_ledger(
-            period_start, period_end, filters,
-            include_comparison, comparison_period_start, comparison_period_end
-        )
+        contacts = Contact.objects.filter(contact_filter).order_by('company_name', 'contact_name')
+        
+        contact_ledgers = []
+        total_debits = Decimal('0.00')
+        total_credits = Decimal('0.00')
+        total_entries = 0
+        
+        for contact in contacts:
+            # Determine linked account based on contact type
+            linked_account = None
+            if contact.contact_type in ['VENDOR', 'BOTH'] and contact.payable_account:
+                linked_account = contact.payable_account
+            elif contact.contact_type in ['CUSTOMER', 'BOTH'] and contact.receivable_account:
+                linked_account = contact.receivable_account
+            
+            # Get journal entries related to this contact through invoices
+            invoice_entries = Q(
+                journal_entry__date__gte=period_start,
+                journal_entry__date__lte=period_end,
+                journal_entry__status=TransactionStatus.POSTED.value,
+                journal_entry__invoices__contact=contact
+            )
+            
+            # Also get entries through payments
+            payment_entries = Q(
+                journal_entry__date__gte=period_start,
+                journal_entry__date__lte=period_end,
+                journal_entry__status=TransactionStatus.POSTED.value,
+                journal_entry__payments__contact=contact
+            )
+            
+            # Combine queries
+            entries_filter = invoice_entries | payment_entries
+            
+            if self.tenant_id:
+                entries_filter &= Q(journal_entry__tenant_id=self.tenant_id)
+            
+            # If linked account exists, also get direct entries to that account
+            if linked_account:
+                direct_entries = Q(
+                    account=linked_account,
+                    journal_entry__date__gte=period_start,
+                    journal_entry__date__lte=period_end,
+                    journal_entry__status=TransactionStatus.POSTED.value
+                )
+                if self.tenant_id:
+                    direct_entries &= Q(journal_entry__tenant_id=self.tenant_id)
+                entries_filter = entries_filter | direct_entries
+            
+            # Get opening balance - sum of all entries before period start
+            opening_filter = Q(
+                journal_entry__date__lt=period_start,
+                journal_entry__status=TransactionStatus.POSTED.value
+            )
+            if linked_account:
+                opening_filter &= Q(account=linked_account)
+            if self.tenant_id:
+                opening_filter &= Q(journal_entry__tenant_id=self.tenant_id)
+            
+            opening_totals = JournalEntryLine.objects.filter(opening_filter).aggregate(
+                total_debit=Sum('debit'),
+                total_credit=Sum('credit')
+            )
+            
+            opening_debit = opening_totals['total_debit'] or Decimal('0.00')
+            opening_credit = opening_totals['total_credit'] or Decimal('0.00')
+            
+            # For AP (vendor): balance = credit - debit (we owe them)
+            # For AR (customer): balance = debit - credit (they owe us)
+            if contact.contact_type in ['VENDOR', 'BOTH']:
+                opening_balance = opening_credit - opening_debit
+            else:
+                opening_balance = opening_debit - opening_credit
+            
+            # Get entries for the period
+            entries = JournalEntryLine.objects.filter(entries_filter).select_related(
+                'journal_entry', 'account'
+            ).order_by('journal_entry__date', 'journal_entry__entry_number').distinct()
+            
+            contact_entries = []
+            running_balance = opening_balance
+            contact_total_debits = Decimal('0.00')
+            contact_total_credits = Decimal('0.00')
+            
+            for entry_line in entries:
+                debit = entry_line.debit or Decimal('0.00')
+                credit = entry_line.credit or Decimal('0.00')
+                
+                if contact.contact_type in ['VENDOR', 'BOTH']:
+                    running_balance += credit - debit
+                else:
+                    running_balance += debit - credit
+                
+                # Get related invoice/payment reference
+                related_ref = ''
+                if entry_line.journal_entry.invoices.exists():
+                    invoice = entry_line.journal_entry.invoices.first()
+                    related_ref = f"Invoice: {invoice.invoice_number}"
+                elif entry_line.journal_entry.payments.exists():
+                    payment = entry_line.journal_entry.payments.first()
+                    related_ref = f"Payment: {payment.payment_number}"
+                
+                contact_entries.append({
+                    'date': entry_line.journal_entry.date.isoformat(),
+                    'entry_number': entry_line.journal_entry.entry_number,
+                    'description': entry_line.description or entry_line.journal_entry.description,
+                    'reference': related_ref or entry_line.journal_entry.reference,
+                    'account_code': entry_line.account.code,
+                    'account_name': entry_line.account.name,
+                    'debit': float(debit),
+                    'credit': float(credit),
+                    'balance': float(running_balance)
+                })
+                
+                contact_total_debits += debit
+                contact_total_credits += credit
+            
+            # Only include contacts with activity or opening balance
+            if contact_entries or opening_balance != Decimal('0.00'):
+                contact_ledgers.append({
+                    'contact_id': str(contact.id),
+                    'contact_name': contact.company_name or contact.contact_name,
+                    'contact_type': contact.contact_type,
+                    'linked_account_code': linked_account.code if linked_account else None,
+                    'linked_account_name': linked_account.name if linked_account else None,
+                    'opening_balance': float(opening_balance),
+                    'entries': contact_entries,
+                    'total_debits': float(contact_total_debits),
+                    'total_credits': float(contact_total_credits),
+                    'closing_balance': float(running_balance),
+                    'entry_count': len(contact_entries)
+                })
+                
+                total_debits += contact_total_debits
+                total_credits += contact_total_credits
+                total_entries += len(contact_entries)
+        
+        return {
+            'ledger_type': ledger_type,
+            'contacts': contact_ledgers,
+            'total_debits': float(total_debits),
+            'total_credits': float(total_credits),
+            'entry_count': total_entries,
+            'contact_count': len(contact_ledgers)
+        }
     
     # =================================================================
     # Trial Balance Generator
