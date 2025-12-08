@@ -712,6 +712,177 @@ class APIKeyStore(BaseModel):
 
 
 # =================================================================
+# Receipt Management with Recognition Status
+# =================================================================
+
+class RecognitionStatus(str, Enum):
+    """Receipt recognition status"""
+    PENDING = 'PENDING'          # Awaiting processing
+    RECOGNIZED = 'RECOGNIZED'    # Successfully extracted data
+    UNRECOGNIZED = 'UNRECOGNIZED'  # Failed to extract/low confidence
+    MANUALLY_CLASSIFIED = 'MANUALLY_CLASSIFIED'  # Manually categorized
+    
+    @classmethod
+    def choices(cls):
+        return [(tag.value, tag.value) for tag in cls]
+
+
+class Receipt(BaseModel):
+    """收據文件 - Receipt with recognition status for bulk upload"""
+    tenant = models.ForeignKey(
+        'core.Tenant',
+        on_delete=models.CASCADE,
+        related_name='receipts',
+        null=True,
+        blank=True
+    )
+    
+    # File Information
+    file = models.FileField(upload_to='receipts/%Y/%m/')
+    original_filename = models.CharField(max_length=255)
+    file_size = models.PositiveIntegerField(default=0)  # in bytes
+    mime_type = models.CharField(max_length=100, blank=True)
+    
+    # Recognition Status
+    recognition_status = models.CharField(
+        max_length=30,
+        choices=RecognitionStatus.choices(),
+        default=RecognitionStatus.PENDING.value
+    )
+    confidence_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.0000'))]
+    )
+    confidence_threshold = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        default=Decimal('0.7000'),
+        help_text='Minimum confidence for automatic recognition'
+    )
+    
+    # Extracted Data (OCR/AI results)
+    extracted_data = models.JSONField(null=True, blank=True)  # Raw OCR result
+    vendor_name = models.CharField(max_length=255, blank=True)
+    receipt_date = models.DateField(null=True, blank=True)
+    total_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    currency_code = models.CharField(max_length=3, blank=True, default='TWD')
+    tax_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    description = models.TextField(blank=True)
+    
+    # Manual Classification Data
+    manual_category = models.ForeignKey(
+        'Account',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='categorized_receipts',
+        help_text='Manually assigned expense category'
+    )
+    manual_vendor = models.CharField(max_length=255, blank=True)
+    manual_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    manual_date = models.DateField(null=True, blank=True)
+    classification_notes = models.TextField(blank=True)
+    classified_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='classified_receipts'
+    )
+    classified_at = models.DateTimeField(null=True, blank=True)
+    
+    # Linked documents
+    project = models.ForeignKey(
+        'Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='receipts'
+    )
+    expense = models.ForeignKey(
+        'Expense',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='linked_receipts'
+    )
+    
+    # Processing metadata
+    processing_started_at = models.DateTimeField(null=True, blank=True)
+    processing_completed_at = models.DateTimeField(null=True, blank=True)
+    processing_error = models.TextField(blank=True)
+    retry_count = models.PositiveSmallIntegerField(default=0)
+    
+    # Upload metadata
+    uploaded_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.PROTECT,
+        related_name='uploaded_receipts'
+    )
+    batch_id = models.UUIDField(null=True, blank=True, db_index=True)  # For grouping bulk uploads
+    
+    # Tags for organization
+    tags = models.JSONField(default=list, blank=True)
+    
+    objects = TenantAwareManager()
+    all_objects = UnscopedManager()
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Receipt'
+        verbose_name_plural = 'Receipts'
+        indexes = [
+            models.Index(fields=['recognition_status', 'created_at']),
+            models.Index(fields=['batch_id']),
+            models.Index(fields=['tenant', 'recognition_status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.original_filename} ({self.recognition_status})"
+    
+    @property
+    def is_recognized(self):
+        return self.recognition_status == RecognitionStatus.RECOGNIZED.value
+    
+    @property
+    def needs_manual_review(self):
+        return self.recognition_status == RecognitionStatus.UNRECOGNIZED.value
+    
+    @property
+    def final_amount(self):
+        """Get the final amount (manual overrides extracted)"""
+        return self.manual_amount or self.total_amount
+    
+    @property
+    def final_vendor(self):
+        """Get the final vendor (manual overrides extracted)"""
+        return self.manual_vendor or self.vendor_name
+    
+    @property
+    def final_date(self):
+        """Get the final date (manual overrides extracted)"""
+        return self.manual_date or self.receipt_date
+
+
+# =================================================================
 # Project Management for Accounting
 # =================================================================
 

@@ -4,7 +4,7 @@ from .models import (
     FiscalYear, AccountingPeriod, Currency, TaxRate, Account,
     JournalEntry, JournalEntryLine, Contact, Invoice, InvoiceLine,
     Payment, PaymentAllocation, Expense, Project, ProjectDocument,
-    ProjectStatus
+    ProjectStatus, Receipt, RecognitionStatus
 )
 
 
@@ -450,3 +450,259 @@ class LinkDocumentToProjectSerializer(serializers.Serializer):
             )
         
         return data
+
+
+# =================================================================
+# Receipt Serializers
+# =================================================================
+
+class ReceiptSerializer(serializers.ModelSerializer):
+    """Full serializer for receipt details"""
+    uploaded_by_name = serializers.CharField(source='uploaded_by.full_name', read_only=True)
+    classified_by_name = serializers.CharField(source='classified_by.full_name', read_only=True)
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    project_code = serializers.CharField(source='project.code', read_only=True)
+    expense_number = serializers.CharField(source='expense.expense_number', read_only=True)
+    category_name = serializers.CharField(source='manual_category.name', read_only=True)
+    category_code = serializers.CharField(source='manual_category.code', read_only=True)
+    final_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    final_vendor = serializers.CharField(read_only=True)
+    final_date = serializers.DateField(read_only=True)
+    is_recognized = serializers.BooleanField(read_only=True)
+    needs_manual_review = serializers.BooleanField(read_only=True)
+    file_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Receipt
+        fields = [
+            'id', 'file', 'file_url', 'original_filename', 'file_size', 'mime_type',
+            'recognition_status', 'confidence_score', 'confidence_threshold',
+            'extracted_data', 'vendor_name', 'receipt_date', 'total_amount',
+            'currency_code', 'tax_amount', 'description',
+            'manual_category', 'category_name', 'category_code',
+            'manual_vendor', 'manual_amount', 'manual_date',
+            'classification_notes', 'classified_by', 'classified_by_name', 'classified_at',
+            'project', 'project_name', 'project_code', 'expense', 'expense_number',
+            'processing_started_at', 'processing_completed_at', 'processing_error',
+            'retry_count', 'uploaded_by', 'uploaded_by_name', 'batch_id', 'tags',
+            'final_amount', 'final_vendor', 'final_date',
+            'is_recognized', 'needs_manual_review',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'file_size', 'mime_type', 'extracted_data',
+            'processing_started_at', 'processing_completed_at',
+            'uploaded_by', 'batch_id', 'created_at', 'updated_at'
+        ]
+    
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return None
+
+
+class ReceiptListSerializer(serializers.ModelSerializer):
+    """Simplified serializer for receipt lists"""
+    uploaded_by_name = serializers.CharField(source='uploaded_by.full_name', read_only=True)
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    category_name = serializers.CharField(source='manual_category.name', read_only=True)
+    final_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    final_vendor = serializers.CharField(read_only=True)
+    final_date = serializers.DateField(read_only=True)
+    needs_manual_review = serializers.BooleanField(read_only=True)
+    file_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Receipt
+        fields = [
+            'id', 'file_url', 'original_filename', 'file_size',
+            'recognition_status', 'confidence_score',
+            'final_amount', 'final_vendor', 'final_date',
+            'project', 'project_name', 'category_name',
+            'uploaded_by_name', 'batch_id',
+            'needs_manual_review', 'created_at'
+        ]
+    
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return None
+
+
+class ReceiptUploadSerializer(serializers.Serializer):
+    """Serializer for single receipt upload"""
+    file = serializers.FileField()
+    project_id = serializers.UUIDField(required=False, allow_null=True)
+    auto_process = serializers.BooleanField(default=True, help_text='Auto process OCR extraction')
+    confidence_threshold = serializers.DecimalField(
+        max_digits=5, decimal_places=4,
+        default='0.7000',
+        help_text='Minimum confidence for recognition'
+    )
+    tags = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False,
+        default=list
+    )
+    
+    def validate_file(self, value):
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+        if value.content_type not in allowed_types:
+            raise serializers.ValidationError(
+                _("Invalid file type. Allowed: JPEG, PNG, GIF, WebP, PDF")
+            )
+        # Validate file size (max 10MB)
+        max_size = 10 * 1024 * 1024
+        if value.size > max_size:
+            raise serializers.ValidationError(
+                _("File size exceeds maximum of 10MB")
+            )
+        return value
+
+
+class BulkReceiptUploadSerializer(serializers.Serializer):
+    """Serializer for bulk receipt upload"""
+    files = serializers.ListField(
+        child=serializers.FileField(),
+        max_length=50,
+        help_text='Maximum 50 files per upload'
+    )
+    project_id = serializers.UUIDField(required=False, allow_null=True)
+    auto_process = serializers.BooleanField(default=True)
+    confidence_threshold = serializers.DecimalField(
+        max_digits=5, decimal_places=4,
+        default='0.7000'
+    )
+    tags = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False,
+        default=list
+    )
+    
+    def validate_files(self, value):
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+        max_size = 10 * 1024 * 1024
+        errors = []
+        
+        for i, file in enumerate(value):
+            if file.content_type not in allowed_types:
+                errors.append(f"File {i+1} ({file.name}): Invalid file type")
+            if file.size > max_size:
+                errors.append(f"File {i+1} ({file.name}): Exceeds 10MB limit")
+        
+        if errors:
+            raise serializers.ValidationError(errors)
+        return value
+
+
+class ReceiptClassifySerializer(serializers.Serializer):
+    """Serializer for manual receipt classification"""
+    category_id = serializers.UUIDField(required=False, allow_null=True)
+    vendor = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    amount = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, allow_null=True)
+    date = serializers.DateField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    tags = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False
+    )
+    
+    def validate_category_id(self, value):
+        if value:
+            from .models import Account, AccountType
+            try:
+                account = Account.objects.get(id=value)
+                if account.account_type != AccountType.EXPENSE.value:
+                    raise serializers.ValidationError(
+                        _("Category must be an expense account")
+                    )
+            except Account.DoesNotExist:
+                raise serializers.ValidationError(_("Category not found"))
+        return value
+
+
+class BulkReceiptClassifySerializer(serializers.Serializer):
+    """Serializer for batch receipt classification"""
+    receipt_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        min_length=1,
+        help_text='List of receipt IDs to classify'
+    )
+    category_id = serializers.UUIDField(required=False, allow_null=True)
+    project_id = serializers.UUIDField(required=False, allow_null=True)
+    tags = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        required=False
+    )
+    notes = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate_receipt_ids(self, value):
+        existing = Receipt.objects.filter(id__in=value).count()
+        if existing != len(value):
+            raise serializers.ValidationError(
+                _("Some receipts were not found")
+            )
+        return value
+    
+    def validate_category_id(self, value):
+        if value:
+            from .models import Account, AccountType
+            try:
+                account = Account.objects.get(id=value)
+                if account.account_type != AccountType.EXPENSE.value:
+                    raise serializers.ValidationError(
+                        _("Category must be an expense account")
+                    )
+            except Account.DoesNotExist:
+                raise serializers.ValidationError(_("Category not found"))
+        return value
+    
+    def validate_project_id(self, value):
+        if value:
+            if not Project.objects.filter(id=value).exists():
+                raise serializers.ValidationError(_("Project not found"))
+        return value
+
+
+class BulkReceiptStatusUpdateSerializer(serializers.Serializer):
+    """Serializer for bulk status update"""
+    receipt_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        min_length=1
+    )
+    status = serializers.ChoiceField(choices=RecognitionStatus.choices())
+    notes = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate_receipt_ids(self, value):
+        existing = Receipt.objects.filter(id__in=value).count()
+        if existing != len(value):
+            raise serializers.ValidationError(
+                _("Some receipts were not found")
+            )
+        return value
+
+
+class ReceiptProcessingResultSerializer(serializers.Serializer):
+    """Serializer for receipt processing result"""
+    id = serializers.UUIDField()
+    original_filename = serializers.CharField()
+    recognition_status = serializers.CharField()
+    confidence_score = serializers.DecimalField(max_digits=5, decimal_places=4, allow_null=True)
+    vendor_name = serializers.CharField(allow_blank=True)
+    total_amount = serializers.DecimalField(max_digits=15, decimal_places=2, allow_null=True)
+    receipt_date = serializers.DateField(allow_null=True)
+    error = serializers.CharField(allow_blank=True, required=False)
+
+
+class BulkUploadProgressSerializer(serializers.Serializer):
+    """Serializer for bulk upload progress response"""
+    batch_id = serializers.UUIDField()
+    total_files = serializers.IntegerField()
+    processed = serializers.IntegerField()
+    recognized = serializers.IntegerField()
+    unrecognized = serializers.IntegerField()
+    failed = serializers.IntegerField()
+    results = ReceiptProcessingResultSerializer(many=True)

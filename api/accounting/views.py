@@ -2,10 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.http import HttpResponse
-from django.db.models import Sum, Q
+from django.db import models
+from django.db.models import Sum, Q, Count, Min
+from django.utils import timezone
 from decimal import Decimal
 import io
+import uuid
 
 # PDF Generation imports
 from reportlab.lib import colors
@@ -20,7 +24,8 @@ from .models import (
     FiscalYear, AccountingPeriod, Currency, TaxRate, Account,
     JournalEntry, JournalEntryLine, Contact, Invoice, InvoiceLine,
     Payment, PaymentAllocation, Expense, AccountType,
-    Project, ProjectDocument, ProjectStatus
+    Project, ProjectDocument, ProjectStatus,
+    Receipt, RecognitionStatus
 )
 from .serializers import (
     FiscalYearSerializer, AccountingPeriodSerializer, CurrencySerializer,
@@ -31,7 +36,10 @@ from .serializers import (
     PaymentSerializer, PaymentAllocationSerializer,
     ExpenseSerializer, ExpenseListSerializer,
     ProjectSerializer, ProjectListSerializer, ProjectCreateSerializer,
-    ProjectUpdateSerializer, ProjectDocumentSerializer, LinkDocumentToProjectSerializer
+    ProjectUpdateSerializer, ProjectDocumentSerializer, LinkDocumentToProjectSerializer,
+    ReceiptSerializer, ReceiptListSerializer, ReceiptUploadSerializer,
+    BulkReceiptUploadSerializer, ReceiptClassifySerializer, BulkReceiptClassifySerializer,
+    BulkReceiptStatusUpdateSerializer
 )
 
 
@@ -936,3 +944,490 @@ class ProjectDocumentViewSet(viewsets.ModelViewSet):
             uploaded_by=self.request.user,
             tenant=getattr(self.request, 'tenant', None)
         )
+
+
+# =================================================================
+# Receipt ViewSet with Bulk Upload & Classification
+# =================================================================
+
+class ReceiptViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for receipt management with bulk upload and classification features.
+    
+    Endpoints:
+    - GET /receipts/ - List all receipts (with filtering)
+    - POST /receipts/ - Single file upload
+    - GET /receipts/{id}/ - Get receipt details
+    - PATCH /receipts/{id}/ - Update receipt
+    - DELETE /receipts/{id}/ - Delete receipt
+    - POST /receipts/bulk_upload/ - Bulk file upload
+    - GET /receipts/unrecognized/ - List unrecognized receipts
+    - POST /receipts/{id}/classify/ - Manual classification
+    - POST /receipts/bulk_classify/ - Batch classification
+    - POST /receipts/bulk_status_update/ - Batch status update
+    - GET /receipts/statistics/ - Get receipt statistics
+    - GET /receipts/batches/ - List upload batches
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ReceiptListSerializer
+        if self.action == 'bulk_upload':
+            return BulkReceiptUploadSerializer
+        if self.action == 'classify':
+            return ReceiptClassifySerializer
+        if self.action == 'bulk_classify':
+            return BulkReceiptClassifySerializer
+        if self.action == 'bulk_status_update':
+            return BulkReceiptStatusUpdateSerializer
+        return ReceiptSerializer
+    
+    def get_queryset(self):
+        queryset = Receipt.objects.all()
+        
+        # Filter by recognition status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(recognition_status=status_filter)
+        
+        # Filter by project
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        
+        # Filter by batch
+        batch_id = self.request.query_params.get('batch')
+        if batch_id:
+            queryset = queryset.filter(batch_id=batch_id)
+        
+        # Filter by date range
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+        
+        # Filter unclassified only
+        unclassified = self.request.query_params.get('unclassified')
+        if unclassified and unclassified.lower() == 'true':
+            queryset = queryset.filter(manual_category__isnull=True)
+        
+        # Search
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(original_filename__icontains=search) |
+                Q(vendor_name__icontains=search) |
+                Q(manual_vendor__icontains=search) |
+                Q(description__icontains=search)
+            )
+        
+        return queryset.select_related(
+            'uploaded_by', 'classified_by', 'project', 'manual_category', 'expense'
+        ).order_by('-created_at')
+    
+    def create(self, request, *args, **kwargs):
+        """Single file upload endpoint"""
+        serializer = ReceiptUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        file = serializer.validated_data['file']
+        project_id = serializer.validated_data.get('project_id')
+        auto_process = serializer.validated_data.get('auto_process', True)
+        confidence_threshold = serializer.validated_data.get('confidence_threshold', Decimal('0.7000'))
+        tags = serializer.validated_data.get('tags', [])
+        
+        # Create receipt record
+        receipt = Receipt.objects.create(
+            tenant=getattr(request, 'tenant', None),
+            file=file,
+            original_filename=file.name,
+            file_size=file.size,
+            mime_type=file.content_type,
+            project_id=project_id,
+            confidence_threshold=confidence_threshold,
+            tags=tags,
+            uploaded_by=request.user,
+            batch_id=uuid.uuid4()  # Single upload gets its own batch
+        )
+        
+        # Process OCR if auto_process is enabled
+        if auto_process:
+            self._process_receipt(receipt)
+        
+        return Response(
+            ReceiptSerializer(receipt, context={'request': request}).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=False, methods=['post'])
+    def bulk_upload(self, request):
+        """
+        Bulk upload endpoint with progress tracking.
+        Returns batch_id and processing results for each file.
+        """
+        serializer = BulkReceiptUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        files = serializer.validated_data['files']
+        project_id = serializer.validated_data.get('project_id')
+        auto_process = serializer.validated_data.get('auto_process', True)
+        confidence_threshold = serializer.validated_data.get('confidence_threshold', Decimal('0.7000'))
+        tags = serializer.validated_data.get('tags', [])
+        
+        # Generate batch ID for this upload
+        batch_id = uuid.uuid4()
+        
+        results = []
+        recognized_count = 0
+        unrecognized_count = 0
+        failed_count = 0
+        
+        for file in files:
+            try:
+                # Create receipt record
+                receipt = Receipt.objects.create(
+                    tenant=getattr(request, 'tenant', None),
+                    file=file,
+                    original_filename=file.name,
+                    file_size=file.size,
+                    mime_type=file.content_type,
+                    project_id=project_id,
+                    confidence_threshold=confidence_threshold,
+                    tags=tags,
+                    uploaded_by=request.user,
+                    batch_id=batch_id
+                )
+                
+                # Process OCR if auto_process is enabled
+                if auto_process:
+                    self._process_receipt(receipt)
+                
+                # Track results
+                if receipt.recognition_status == RecognitionStatus.RECOGNIZED.value:
+                    recognized_count += 1
+                elif receipt.recognition_status == RecognitionStatus.UNRECOGNIZED.value:
+                    unrecognized_count += 1
+                
+                results.append({
+                    'id': str(receipt.id),
+                    'original_filename': receipt.original_filename,
+                    'recognition_status': receipt.recognition_status,
+                    'confidence_score': receipt.confidence_score,
+                    'vendor_name': receipt.vendor_name or '',
+                    'total_amount': receipt.total_amount,
+                    'receipt_date': receipt.receipt_date,
+                    'error': receipt.processing_error or ''
+                })
+                
+            except Exception as e:
+                failed_count += 1
+                results.append({
+                    'id': None,
+                    'original_filename': file.name,
+                    'recognition_status': 'FAILED',
+                    'confidence_score': None,
+                    'vendor_name': '',
+                    'total_amount': None,
+                    'receipt_date': None,
+                    'error': str(e)
+                })
+        
+        return Response({
+            'batch_id': str(batch_id),
+            'total_files': len(files),
+            'processed': len(results),
+            'recognized': recognized_count,
+            'unrecognized': unrecognized_count,
+            'failed': failed_count,
+            'results': results
+        }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['get'])
+    def unrecognized(self, request):
+        """Get all unrecognized receipts that need manual classification"""
+        queryset = self.get_queryset().filter(
+            recognition_status=RecognitionStatus.UNRECOGNIZED.value
+        )
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = ReceiptListSerializer(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = ReceiptListSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def classify(self, request, pk=None):
+        """Manual classification for a single receipt"""
+        receipt = self.get_object()
+        serializer = ReceiptClassifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Update manual classification fields
+        category_id = serializer.validated_data.get('category_id')
+        if category_id:
+            receipt.manual_category_id = category_id
+        
+        vendor = serializer.validated_data.get('vendor')
+        if vendor:
+            receipt.manual_vendor = vendor
+        
+        amount = serializer.validated_data.get('amount')
+        if amount is not None:
+            receipt.manual_amount = amount
+        
+        date = serializer.validated_data.get('date')
+        if date:
+            receipt.manual_date = date
+        
+        notes = serializer.validated_data.get('notes')
+        if notes:
+            receipt.classification_notes = notes
+        
+        tags = serializer.validated_data.get('tags')
+        if tags:
+            receipt.tags = tags
+        
+        # Update status and classification metadata
+        receipt.recognition_status = RecognitionStatus.MANUALLY_CLASSIFIED.value
+        receipt.classified_by = request.user
+        receipt.classified_at = timezone.now()
+        receipt.save()
+        
+        return Response({
+            'message': 'Receipt classified successfully',
+            'receipt': ReceiptSerializer(receipt, context={'request': request}).data
+        })
+    
+    @action(detail=False, methods=['post'])
+    def bulk_classify(self, request):
+        """Batch classification for multiple receipts"""
+        serializer = BulkReceiptClassifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        receipt_ids = serializer.validated_data['receipt_ids']
+        category_id = serializer.validated_data.get('category_id')
+        project_id = serializer.validated_data.get('project_id')
+        tags = serializer.validated_data.get('tags', [])
+        notes = serializer.validated_data.get('notes', '')
+        
+        # Build update fields
+        update_fields = {
+            'recognition_status': RecognitionStatus.MANUALLY_CLASSIFIED.value,
+            'classified_by': request.user,
+            'classified_at': timezone.now()
+        }
+        
+        if category_id:
+            update_fields['manual_category_id'] = category_id
+        if project_id:
+            update_fields['project_id'] = project_id
+        if notes:
+            update_fields['classification_notes'] = notes
+        
+        # Update receipts
+        updated_count = Receipt.objects.filter(id__in=receipt_ids).update(**update_fields)
+        
+        # Update tags separately (JSONField requires individual updates for append)
+        if tags:
+            for receipt in Receipt.objects.filter(id__in=receipt_ids):
+                existing_tags = receipt.tags or []
+                receipt.tags = list(set(existing_tags + tags))
+                receipt.save(update_fields=['tags'])
+        
+        return Response({
+            'message': f'Successfully classified {updated_count} receipts',
+            'updated_count': updated_count
+        })
+    
+    @action(detail=False, methods=['post'])
+    def bulk_status_update(self, request):
+        """Batch status update for multiple receipts"""
+        serializer = BulkReceiptStatusUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        receipt_ids = serializer.validated_data['receipt_ids']
+        new_status = serializer.validated_data['status']
+        notes = serializer.validated_data.get('notes', '')
+        
+        update_fields = {'recognition_status': new_status}
+        
+        if new_status == RecognitionStatus.MANUALLY_CLASSIFIED.value:
+            update_fields['classified_by'] = request.user
+            update_fields['classified_at'] = timezone.now()
+        
+        if notes:
+            update_fields['classification_notes'] = notes
+        
+        updated_count = Receipt.objects.filter(id__in=receipt_ids).update(**update_fields)
+        
+        return Response({
+            'message': f'Successfully updated {updated_count} receipts',
+            'updated_count': updated_count
+        })
+    
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Get receipt statistics"""
+        queryset = self.get_queryset()
+        
+        total = queryset.count()
+        by_status = queryset.values('recognition_status').annotate(count=Count('id'))
+        
+        # Calculate amounts
+        total_recognized_amount = queryset.filter(
+            recognition_status__in=[
+                RecognitionStatus.RECOGNIZED.value,
+                RecognitionStatus.MANUALLY_CLASSIFIED.value
+            ]
+        ).aggregate(
+            total=Sum('total_amount')
+        )['total'] or Decimal('0')
+        
+        # Recent batches
+        recent_batches = queryset.exclude(batch_id__isnull=True).values(
+            'batch_id'
+        ).annotate(
+            count=Count('id'),
+            recognized=Count('id', filter=Q(recognition_status=RecognitionStatus.RECOGNIZED.value)),
+            unrecognized=Count('id', filter=Q(recognition_status=RecognitionStatus.UNRECOGNIZED.value))
+        ).order_by('-batch_id')[:10]
+        
+        return Response({
+            'total_receipts': total,
+            'by_status': {item['recognition_status']: item['count'] for item in by_status},
+            'total_recognized_amount': float(total_recognized_amount),
+            'needs_review': queryset.filter(
+                recognition_status=RecognitionStatus.UNRECOGNIZED.value
+            ).count(),
+            'recent_batches': list(recent_batches)
+        })
+    
+    @action(detail=False, methods=['get'])
+    def batches(self, request):
+        """List all upload batches with summary"""
+        queryset = self.get_queryset().exclude(batch_id__isnull=True)
+        
+        batches = queryset.values('batch_id').annotate(
+            total=Count('id'),
+            recognized=Count('id', filter=Q(recognition_status=RecognitionStatus.RECOGNIZED.value)),
+            unrecognized=Count('id', filter=Q(recognition_status=RecognitionStatus.UNRECOGNIZED.value)),
+            manually_classified=Count('id', filter=Q(recognition_status=RecognitionStatus.MANUALLY_CLASSIFIED.value)),
+            first_upload=models.Min('created_at')
+        ).order_by('-first_upload')
+        
+        # Pagination
+        page_size = int(request.query_params.get('page_size', 20))
+        page_num = int(request.query_params.get('page', 1))
+        
+        start = (page_num - 1) * page_size
+        end = start + page_size
+        
+        return Response({
+            'count': len(batches),
+            'results': list(batches[start:end])
+        })
+    
+    @action(detail=True, methods=['post'])
+    def reprocess(self, request, pk=None):
+        """Re-process OCR for a receipt"""
+        receipt = self.get_object()
+        
+        if receipt.retry_count >= 3:
+            return Response(
+                {'error': 'Maximum retry attempts reached'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        receipt.retry_count += 1
+        receipt.recognition_status = RecognitionStatus.PENDING.value
+        receipt.processing_error = ''
+        receipt.save()
+        
+        # Re-process
+        self._process_receipt(receipt)
+        
+        return Response({
+            'message': 'Receipt reprocessed',
+            'receipt': ReceiptSerializer(receipt, context={'request': request}).data
+        })
+    
+    def _process_receipt(self, receipt):
+        """
+        Process receipt with OCR/AI extraction.
+        This is a placeholder - integrate with actual OCR service.
+        """
+        try:
+            receipt.processing_started_at = timezone.now()
+            receipt.save(update_fields=['processing_started_at'])
+            
+            # TODO: Integrate with actual OCR service (e.g., Google Vision, AWS Textract, etc.)
+            # For now, simulate processing based on file presence
+            
+            # Simulated extraction result
+            # In production, call OCR API here
+            extracted_data = self._extract_receipt_data(receipt)
+            
+            if extracted_data:
+                receipt.extracted_data = extracted_data
+                receipt.vendor_name = extracted_data.get('vendor', '')
+                receipt.total_amount = extracted_data.get('total')
+                receipt.receipt_date = extracted_data.get('date')
+                receipt.tax_amount = extracted_data.get('tax')
+                receipt.currency_code = extracted_data.get('currency', 'TWD')
+                receipt.description = extracted_data.get('description', '')
+                receipt.confidence_score = Decimal(str(extracted_data.get('confidence', 0)))
+                
+                # Determine recognition status based on confidence
+                if receipt.confidence_score >= receipt.confidence_threshold:
+                    receipt.recognition_status = RecognitionStatus.RECOGNIZED.value
+                else:
+                    receipt.recognition_status = RecognitionStatus.UNRECOGNIZED.value
+                    receipt.processing_error = f"Low confidence ({receipt.confidence_score}) below threshold ({receipt.confidence_threshold})"
+            else:
+                receipt.recognition_status = RecognitionStatus.UNRECOGNIZED.value
+                receipt.processing_error = "Failed to extract data from receipt"
+            
+            receipt.processing_completed_at = timezone.now()
+            receipt.save()
+            
+        except Exception as e:
+            receipt.recognition_status = RecognitionStatus.UNRECOGNIZED.value
+            receipt.processing_error = str(e)
+            receipt.processing_completed_at = timezone.now()
+            receipt.save()
+    
+    def _extract_receipt_data(self, receipt):
+        """
+        Placeholder for OCR extraction.
+        Replace with actual OCR service integration.
+        """
+        # This is a mock implementation
+        # In production, integrate with:
+        # - Google Cloud Vision API
+        # - AWS Textract
+        # - Azure Form Recognizer
+        # - Custom OCR service
+        
+        import random
+        
+        # Simulate random extraction results for demo
+        # In production, this would call the actual OCR API
+        confidence = random.uniform(0.5, 0.95)
+        
+        if confidence > 0.6:
+            return {
+                'vendor': f'Vendor_{random.randint(1, 100)}',
+                'total': Decimal(str(round(random.uniform(10, 1000), 2))),
+                'date': timezone.now().date(),
+                'tax': Decimal(str(round(random.uniform(1, 100), 2))),
+                'currency': 'TWD',
+                'description': 'Auto-extracted receipt',
+                'confidence': confidence
+            }
+        return None
