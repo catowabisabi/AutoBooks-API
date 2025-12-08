@@ -47,3 +47,4 @@ requests>=2.31
 
 # Utilities
 python-dateutil>=2.8
+python-magic>=0.4  # For MIME type detection
