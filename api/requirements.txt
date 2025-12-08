@@ -7,6 +7,12 @@ django-cors-headers>=4.3
 # Database
 psycopg2-binary>=2.9
 
+# Async Task Queue
+celery>=5.3
+redis>=5.0
+django-celery-results>=2.5
+django-celery-beat>=2.5
+
 # Environment
 python-dotenv>=1.0
 

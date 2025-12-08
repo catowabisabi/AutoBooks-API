@@ -239,6 +239,11 @@ urlpatterns = [
          QuickChartView.as_view(), 
          name="visualization-quick"),
     
+    # Task Progress API / 任務進度 API
+    path("task-status/<str:task_id>/", 
+         TaskProgressView.as_view(), 
+         name="task-status"),
+    
     # Include router URLs
     path("", include(router.urls)),
 ]
