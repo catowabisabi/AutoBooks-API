@@ -55,6 +55,11 @@ from ai_assistants.views.project_viewset import (
 from ai_assistants.views.feedback_viewset import (
     AIFeedbackViewSet,
     AIResultLogViewSet,
+    AIRequestLogViewSet,
+    VectorSearchLogViewSet,
+    KnowledgeGapLogViewSet,
+    AIUsageSummaryViewSet,
+    RAGObservabilityDashboardViewSet,
 )
 from ai_assistants.views.task_viewset import (
     AsyncTaskViewSet,
@@ -91,6 +96,13 @@ router.register(r'brainstorm-assistant/participants', BrainstormMeetingParticipa
 # AI Feedback & Results Router
 router.register(r'ai-feedback', AIFeedbackViewSet, basename='ai-feedback')
 router.register(r'ai-results', AIResultLogViewSet, basename='ai-result')
+
+# RAG Observability Router / RAG 可觀測性路由
+router.register(r'ai-requests', AIRequestLogViewSet, basename='ai-request')
+router.register(r'vector-searches', VectorSearchLogViewSet, basename='vector-search')
+router.register(r'knowledge-gaps', KnowledgeGapLogViewSet, basename='knowledge-gap')
+router.register(r'usage-summary', AIUsageSummaryViewSet, basename='usage-summary')
+router.register(r'rag-dashboard', RAGObservabilityDashboardViewSet, basename='rag-dashboard')
 
 # Async Tasks Router
 router.register(r'tasks', AsyncTaskViewSet, basename='async-task')
