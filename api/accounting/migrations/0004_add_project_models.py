@@ -12,7 +12,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounting', '0003_remove_account_acc_account_type_idx_and_more'),
-        ('core', '__first__'),
+        ('coredata', '0001_initial'), 
+        #('core', '__first__'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
