@@ -84,6 +84,10 @@ class TenantMiddleware(MiddlewareMixin):
                             'error': 'write_access_required',
                             'message': _('Write access is required for this operation.')
                         }, status=403)
+            elif self._is_invitation_accept_path(request.path):
+                # Allow non-members to accept invitations
+                set_current_tenant(tenant)
+                request.tenant = tenant
             else:
                 # User doesn't have access to requested tenant
                 return JsonResponse({
@@ -115,8 +119,12 @@ class TenantMiddleware(MiddlewareMixin):
         Tenant = get_tenant_model()
         header_present = False
 
+        def _get_header(name):
+            # Django exposes HTTP_X_TENANT_ID in META; request.headers normalizes too
+            return request.headers.get(name) or request.META.get('HTTP_' + name.upper().replace('-', '_'))
+
         # Try X-Tenant-ID header first
-        tenant_id = request.headers.get('X-Tenant-ID')
+        tenant_id = _get_header('X-Tenant-ID')
         if tenant_id:
             header_present = True
             try:
@@ -125,7 +133,7 @@ class TenantMiddleware(MiddlewareMixin):
                 return None, True
         
         # Try X-Tenant-Slug header
-        tenant_slug = request.headers.get('X-Tenant-Slug')
+        tenant_slug = _get_header('X-Tenant-Slug')
         if tenant_slug:
             header_present = True
             try:
@@ -134,6 +142,9 @@ class TenantMiddleware(MiddlewareMixin):
                 return None, True
         
         return (None, False) if header_present else (None, None)
+
+    def _is_invitation_accept_path(self, path: str) -> bool:
+        return 'tenant-invitations' in path and path.rstrip('/').endswith('accept')
     
     def _get_membership(self, user, tenant):
         """Get user's membership for a tenant"""

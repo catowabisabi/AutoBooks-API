@@ -139,6 +139,17 @@ class LoginAttempt(BaseModel):
         if was_successful is not None:
             self.success = was_successful
 
+    @classmethod
+    def get_recent_failures(cls, user_or_id, minutes: int = 15) -> int:
+        """Return count of failed login attempts in a time window."""
+        user_id = getattr(user_or_id, 'id', user_or_id)
+        window_start = timezone.now() - timedelta(minutes=minutes)
+        return cls.objects.filter(
+            user_id=user_id,
+            success=False,
+            created_at__gte=window_start,
+        ).count()
+
 
 class AccountLock(BaseModel):
     """

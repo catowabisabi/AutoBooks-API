@@ -8,6 +8,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import get_object_or_404
 
@@ -202,16 +203,62 @@ class InvitationViewSet(viewsets.ViewSet):
     """
     ViewSet for handling invitations.
     
-    accept: POST /invitations/accept/  - Accept an invitation
+    accept: POST /tenant-invitations/{id}/accept/  - Accept an invitation
     """
     permission_classes = [IsAuthenticated]
-    
-    @action(detail=False, methods=['post'])
-    def accept(self, request):
-        """Accept a tenant invitation"""
-        serializer = AcceptInvitationSerializer(data=request.data, context={'request': request})
+
+    def create(self, request):
+        """Create a tenant invitation (owner/admin only)"""
+        from core.tenants.models import TenantRole
+
+        tenant = getattr(request, 'tenant', None)
+        membership = getattr(request, 'tenant_membership', None)
+
+        if tenant is None or membership is None:
+            return Response({
+                'error': 'tenant_required',
+                'message': _('A valid tenant context is required.')
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if membership.role not in [TenantRole.OWNER.value, TenantRole.ADMIN.value]:
+            return Response({
+                'error': 'permission_denied',
+                'message': _('Admin access required to invite users.')
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = InviteUserSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        membership = serializer.save()
+        invitation = serializer.save()
+
+        return Response(
+            TenantInvitationSerializer(invitation).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=True, methods=['post'], url_path='accept')
+    def accept(self, request, pk=None):
+        """Accept a tenant invitation"""
+        invitation = get_object_or_404(TenantInvitation, pk=pk)
+
+        if not invitation.is_valid:
+            return Response({
+                'error': 'invalid_invitation',
+                'message': _('This invitation has expired or was already used.')
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        membership, _ = TenantMembership.objects.update_or_create(
+            tenant=invitation.tenant,
+            user=request.user,
+            defaults={
+                'role': invitation.role,
+                'is_active': True,
+                'invited_by': invitation.invited_by,
+                'accepted_at': timezone.now()
+            }
+        )
+
+        invitation.accepted_at = timezone.now()
+        invitation.save()
         
         return Response({
             'message': _('Invitation accepted successfully.'),

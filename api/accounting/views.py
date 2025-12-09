@@ -76,6 +76,25 @@ class CurrencyViewSet(viewsets.ModelViewSet):
     serializer_class = CurrencySerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        from core.tenants.models import TenantRole
+
+        membership = getattr(request, 'tenant_membership', None)
+        if membership and membership.role == TenantRole.VIEWER.value:
+            return Response({
+                'error': 'permission_denied',
+                'message': 'Viewer role cannot create resources.'
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        return super().create(request, *args, **kwargs)
+
 
 class TaxRateViewSet(viewsets.ModelViewSet):
     queryset = TaxRate.objects.filter(is_active=True)
