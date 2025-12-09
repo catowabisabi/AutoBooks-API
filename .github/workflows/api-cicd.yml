@@ -101,7 +101,7 @@ jobs:
             API_PORT=8001 docker compose -f docker-compose.standalone.yml up -d --build
             
             # 清理舊映像
-            docker image prune -f
+            docker image prune -f 
             
             # 等待服務啟動
             sleep 10
