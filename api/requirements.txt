@@ -68,3 +68,9 @@ drf-spectacular-sidecar==2024.11.1
 celery
 django-filter
 reportlab
+
+# Testing
+pytest>=7.4,<9.0
+pytest-django>=4.5,<5.0
+pytest-cov>=4.1,<6.0
+factory-boy>=3.3,<4.0
