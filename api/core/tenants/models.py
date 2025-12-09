@@ -29,6 +29,13 @@ class TenantRole(str, Enum):
     def has_admin_access(cls, role: str) -> bool:
         return role in [cls.OWNER.value, cls.ADMIN.value]
 
+    # Convenience helpers for permission checks (used in tests)
+    def can_manage_members(self) -> bool:
+        return self.value in [self.OWNER.value, self.ADMIN.value]
+
+    def can_write(self) -> bool:
+        return self.value != self.VIEWER.value
+
 
 class Tenant(models.Model):
     """

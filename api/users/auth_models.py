@@ -132,6 +132,13 @@ class LoginAttempt(BaseModel):
         status = '✓' if self.success else '✗'
         return f"{status} {self.email} @ {self.created_at}"
 
+    def __init__(self, *args, **kwargs):
+        # Accept legacy kwarg used in tests
+        was_successful = kwargs.pop('was_successful', None)
+        super().__init__(*args, **kwargs)
+        if was_successful is not None:
+            self.success = was_successful
+
 
 class AccountLock(BaseModel):
     """

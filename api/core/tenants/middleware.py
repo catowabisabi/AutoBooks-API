@@ -60,8 +60,14 @@ class TenantMiddleware(MiddlewareMixin):
         if not hasattr(request, 'user') or not request.user.is_authenticated:
             return None
         
-        tenant = self._resolve_tenant(request)
-        
+        tenant, invalid_header = self._resolve_tenant(request)
+
+        if invalid_header:
+            return JsonResponse({
+                'error': 'invalid_tenant_header',
+                'message': _('Invalid tenant identifier provided.')
+            }, status=400)
+
         if tenant:
             # Verify user has access to this tenant
             membership = self._get_membership(request.user, tenant)
@@ -69,6 +75,15 @@ class TenantMiddleware(MiddlewareMixin):
                 set_current_tenant(tenant)
                 request.tenant = tenant
                 request.tenant_membership = membership
+
+                # Prevent viewers from write operations
+                if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+                    from core.tenants.models import TenantRole
+                    if membership.role == TenantRole.VIEWER.value:
+                        return JsonResponse({
+                            'error': 'write_access_required',
+                            'message': _('Write access is required for this operation.')
+                        }, status=403)
             else:
                 # User doesn't have access to requested tenant
                 return JsonResponse({
@@ -98,24 +113,27 @@ class TenantMiddleware(MiddlewareMixin):
     def _resolve_tenant(self, request):
         """Resolve tenant from request headers"""
         Tenant = get_tenant_model()
-        
+        header_present = False
+
         # Try X-Tenant-ID header first
         tenant_id = request.headers.get('X-Tenant-ID')
         if tenant_id:
+            header_present = True
             try:
-                return Tenant.objects.get(id=tenant_id, is_active=True)
+                return Tenant.objects.get(id=tenant_id, is_active=True), False
             except (Tenant.DoesNotExist, ValueError):
-                pass
+                return None, True
         
         # Try X-Tenant-Slug header
         tenant_slug = request.headers.get('X-Tenant-Slug')
         if tenant_slug:
+            header_present = True
             try:
-                return Tenant.objects.get(slug=tenant_slug, is_active=True)
+                return Tenant.objects.get(slug=tenant_slug, is_active=True), False
             except Tenant.DoesNotExist:
-                pass
+                return None, True
         
-        return None
+        return (None, False) if header_present else (None, None)
     
     def _get_membership(self, user, tenant):
         """Get user's membership for a tenant"""
