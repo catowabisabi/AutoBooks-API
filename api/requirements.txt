@@ -67,3 +67,4 @@ drf-spectacular==0.28.0
 drf-spectacular-sidecar==2024.11.1
 celery
 django-filter
+reportlab
