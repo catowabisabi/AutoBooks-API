@@ -117,31 +117,31 @@ class TenantMiddleware(MiddlewareMixin):
     def _resolve_tenant(self, request):
         """Resolve tenant from request headers"""
         Tenant = get_tenant_model()
-        header_present = False
-
+        
         def _get_header(name):
-            # Django exposes HTTP_X_TENANT_ID in META; request.headers normalizes too
-            return request.headers.get(name) or request.META.get('HTTP_' + name.upper().replace('-', '_'))
+            # Django test client sends HTTP_X_TENANT_ID in META
+            meta_key = 'HTTP_' + name.upper().replace('-', '_')
+            return request.META.get(meta_key) or request.headers.get(name)
 
         # Try X-Tenant-ID header first
         tenant_id = _get_header('X-Tenant-ID')
         if tenant_id:
-            header_present = True
             try:
                 return Tenant.objects.get(id=tenant_id, is_active=True), False
-            except (Tenant.DoesNotExist, ValueError):
+            except Exception:
+                # Invalid UUID or tenant not found
                 return None, True
         
         # Try X-Tenant-Slug header
         tenant_slug = _get_header('X-Tenant-Slug')
         if tenant_slug:
-            header_present = True
             try:
                 return Tenant.objects.get(slug=tenant_slug, is_active=True), False
             except Tenant.DoesNotExist:
                 return None, True
         
-        return (None, False) if header_present else (None, None)
+        # No tenant header provided
+        return None, False
 
     def _is_invitation_accept_path(self, path: str) -> bool:
         return 'tenant-invitations' in path and path.rstrip('/').endswith('accept')

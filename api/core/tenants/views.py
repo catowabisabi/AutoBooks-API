@@ -9,8 +9,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as gettext
 from django.shortcuts import get_object_or_404
+
+# Alias for translation
+_ = gettext
 
 from .models import Tenant, TenantMembership, TenantInvitation, TenantRole
 from .serializers import (
@@ -207,25 +210,61 @@ class InvitationViewSet(viewsets.ViewSet):
     """
     permission_classes = [IsAuthenticated]
 
+    def _get_tenant_context(self, request):
+        """Get tenant and membership from request, resolving from headers if needed"""
+        tenant = getattr(request, 'tenant', None)
+        membership = getattr(request, 'tenant_membership', None)
+        
+        if tenant and membership:
+            return tenant, membership
+        
+        # Try to resolve from headers (fallback for test client)
+        tenant_id = request.META.get('HTTP_X_TENANT_ID') or request.headers.get('X-Tenant-ID')
+        tenant_slug = request.META.get('HTTP_X_TENANT_SLUG') or request.headers.get('X-Tenant-Slug')
+        
+        if tenant_id:
+            try:
+                tenant = Tenant.objects.get(id=tenant_id, is_active=True)
+            except (Tenant.DoesNotExist, ValueError, Exception):
+                return None, None
+        elif tenant_slug:
+            try:
+                tenant = Tenant.objects.get(slug=tenant_slug, is_active=True)
+            except Tenant.DoesNotExist:
+                return None, None
+        
+        if tenant:
+            try:
+                membership = TenantMembership.objects.get(
+                    user=request.user,
+                    tenant=tenant,
+                    is_active=True
+                )
+            except TenantMembership.DoesNotExist:
+                return tenant, None
+        
+        return tenant, membership
+
     def create(self, request):
         """Create a tenant invitation (owner/admin only)"""
         from core.tenants.models import TenantRole
 
-        tenant = getattr(request, 'tenant', None)
-        membership = getattr(request, 'tenant_membership', None)
+        tenant, membership = self._get_tenant_context(request)
 
         if tenant is None or membership is None:
             return Response({
                 'error': 'tenant_required',
-                'message': _('A valid tenant context is required.')
+                'message': gettext('A valid tenant context is required.')
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if membership.role not in [TenantRole.OWNER.value, TenantRole.ADMIN.value]:
             return Response({
                 'error': 'permission_denied',
-                'message': _('Admin access required to invite users.')
+                'message': gettext('Admin access required to invite users.')
             }, status=status.HTTP_403_FORBIDDEN)
 
+        # Ensure request has tenant for serializer
+        request.tenant = tenant
         serializer = InviteUserSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         invitation = serializer.save()
@@ -243,10 +282,10 @@ class InvitationViewSet(viewsets.ViewSet):
         if not invitation.is_valid:
             return Response({
                 'error': 'invalid_invitation',
-                'message': _('This invitation has expired or was already used.')
+                'message': gettext('This invitation has expired or was already used.')
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        membership, _ = TenantMembership.objects.update_or_create(
+        membership, created = TenantMembership.objects.update_or_create(
             tenant=invitation.tenant,
             user=request.user,
             defaults={
@@ -261,7 +300,7 @@ class InvitationViewSet(viewsets.ViewSet):
         invitation.save()
         
         return Response({
-            'message': _('Invitation accepted successfully.'),
+            'message': gettext('Invitation accepted successfully.'),
             'membership': TenantMembershipSerializer(membership).data
         })
     

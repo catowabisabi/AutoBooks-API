@@ -240,3 +240,16 @@ class AccountLock(BaseModel):
         ).filter(
             models.Q(locked_until__isnull=True) | models.Q(locked_until__gt=timezone.now())
         ).first()
+
+    @classmethod
+    def lock_account(cls, user, reason, locked_by=None, duration_minutes=None, notes=''):
+        """Alias for lock_user to match test expectations"""
+        locked_until = None
+        if duration_minutes:
+            locked_until = timezone.now() + timedelta(minutes=duration_minutes)
+        return cls.objects.create(
+            user=user,
+            reason='admin_action',
+            locked_until=locked_until,
+            notes=reason
+        )

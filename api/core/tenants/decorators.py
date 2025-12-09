@@ -188,3 +188,91 @@ class TenantRolePermission:
         if hasattr(obj, 'tenant'):
             return obj.tenant == request.tenant
         return True
+
+
+class TenantAccessPermission:
+    """
+    DRF Permission class that resolves tenant from headers and enforces access.
+    This runs after DRF authentication, so it works with force_authenticate.
+    
+    Usage in ViewSet:
+        permission_classes = [IsAuthenticated, TenantAccessPermission]
+    """
+    
+    def has_permission(self, request, view):
+        from .models import Tenant, TenantMembership, TenantRole
+        from .managers import set_current_tenant
+        
+        # Already set by middleware?
+        if getattr(request, 'tenant', None) and getattr(request, 'tenant_membership', None):
+            # Still check viewer write restriction
+            return self._check_write_access(request)
+        
+        # Resolve tenant from headers
+        tenant = self._resolve_tenant(request)
+        if tenant is None:
+            # Check if header was provided but invalid
+            tenant_header = request.META.get('HTTP_X_TENANT_ID') or request.META.get('HTTP_X_TENANT_SLUG')
+            if tenant_header:
+                # Invalid tenant header
+                return False
+            # No header - try default tenant
+            tenant = self._get_default_tenant(request.user)
+        
+        if tenant is None:
+            # No tenant context available
+            return False
+        
+        # Get membership
+        membership = self._get_membership(request.user, tenant)
+        if membership is None:
+            return False
+        
+        # Set on request
+        request.tenant = tenant
+        request.tenant_membership = membership
+        set_current_tenant(tenant)
+        
+        return self._check_write_access(request)
+    
+    def _check_write_access(self, request):
+        from .models import TenantRole
+        
+        membership = getattr(request, 'tenant_membership', None)
+        if membership and request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            if membership.role == TenantRole.VIEWER.value:
+                return False
+        return True
+    
+    def _resolve_tenant(self, request):
+        from .models import Tenant
+        
+        tenant_id = request.META.get('HTTP_X_TENANT_ID') or request.headers.get('X-Tenant-ID')
+        if tenant_id:
+            try:
+                return Tenant.objects.get(id=tenant_id, is_active=True)
+            except Exception:
+                return None
+        
+        tenant_slug = request.META.get('HTTP_X_TENANT_SLUG') or request.headers.get('X-Tenant-Slug')
+        if tenant_slug:
+            try:
+                return Tenant.objects.get(slug=tenant_slug, is_active=True)
+            except Tenant.DoesNotExist:
+                return None
+        
+        return None
+    
+    def _get_membership(self, user, tenant):
+        from .models import TenantMembership
+        try:
+            return TenantMembership.objects.get(user=user, tenant=tenant, is_active=True)
+        except TenantMembership.DoesNotExist:
+            return None
+    
+    def _get_default_tenant(self, user):
+        from .models import TenantMembership
+        membership = TenantMembership.objects.filter(
+            user=user, is_active=True, tenant__is_active=True
+        ).select_related('tenant').first()
+        return membership.tenant if membership else None

@@ -71,28 +71,93 @@ class AccountingPeriodViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class CurrencyViewSet(viewsets.ModelViewSet):
-    queryset = Currency.objects.all()
+class TenantContextMixin:
+    """
+    Mixin that ensures tenant context is properly set from headers.
+    Handles DRF test client where middleware may not set tenant.
+    """
+    
+    def initial(self, request, *args, **kwargs):
+        """Called before view handler, after authentication."""
+        super().initial(request, *args, **kwargs)
+        self._ensure_tenant_context(request)
+    
+    def _ensure_tenant_context(self, request):
+        """Ensure tenant context is set (handles DRF test client)"""
+        # Already set by middleware?
+        if getattr(request, 'tenant', None) and getattr(request, 'tenant_membership', None):
+            return
+        
+        from core.tenants.models import Tenant, TenantMembership
+        from core.tenants.managers import set_current_tenant
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+        
+        tenant_id = request.META.get('HTTP_X_TENANT_ID')
+        tenant_slug = request.META.get('HTTP_X_TENANT_SLUG')
+        
+        tenant = None
+        
+        if tenant_id:
+            try:
+                tenant = Tenant.objects.get(id=tenant_id, is_active=True)
+            except Tenant.DoesNotExist:
+                raise ValidationError({'error': 'invalid_tenant', 'message': 'Invalid tenant ID'})
+            except Exception:
+                raise ValidationError({'error': 'invalid_tenant', 'message': 'Invalid tenant ID format'})
+        elif tenant_slug:
+            try:
+                tenant = Tenant.objects.get(slug=tenant_slug, is_active=True)
+            except Tenant.DoesNotExist:
+                raise ValidationError({'error': 'invalid_tenant', 'message': 'Invalid tenant slug'})
+        
+        if tenant is None:
+            # No tenant header - try default
+            membership = TenantMembership.objects.filter(
+                user=request.user, is_active=True, tenant__is_active=True
+            ).select_related('tenant').first()
+            if membership:
+                tenant = membership.tenant
+                request.tenant = tenant
+                request.tenant_membership = membership
+                set_current_tenant(tenant)
+            return
+        
+        # Verify membership
+        try:
+            membership = TenantMembership.objects.get(
+                user=request.user, tenant=tenant, is_active=True
+            )
+        except TenantMembership.DoesNotExist:
+            raise PermissionDenied('You do not have access to this organization.')
+        
+        request.tenant = tenant
+        request.tenant_membership = membership
+        set_current_tenant(tenant)
+    
+    def _check_viewer_write(self, request):
+        """Check if viewer is trying to write"""
+        from core.tenants.models import TenantRole
+        
+        membership = getattr(request, 'tenant_membership', None)
+        if membership and request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            if membership.role == TenantRole.VIEWER.value:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('Viewer role cannot modify resources.')
+
+
+class CurrencyViewSet(TenantContextMixin, viewsets.ModelViewSet):
     serializer_class = CurrencySerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
         tenant = getattr(self.request, 'tenant', None)
         if tenant:
-            queryset = queryset.filter(tenant=tenant)
-        return queryset
+            # Use all_objects to bypass TenantAwareManager, then filter explicitly
+            return Currency.all_objects.filter(tenant=tenant)
+        return Currency.all_objects.none()
 
     def create(self, request, *args, **kwargs):
-        from core.tenants.models import TenantRole
-
-        membership = getattr(request, 'tenant_membership', None)
-        if membership and membership.role == TenantRole.VIEWER.value:
-            return Response({
-                'error': 'permission_denied',
-                'message': 'Viewer role cannot create resources.'
-            }, status=status.HTTP_403_FORBIDDEN)
-
+        self._check_viewer_write(request)
         return super().create(request, *args, **kwargs)
 
 
@@ -102,7 +167,7 @@ class TaxRateViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 
-class AccountViewSet(viewsets.ModelViewSet):
+class AccountViewSet(TenantContextMixin, viewsets.ModelViewSet):
     queryset = Account.objects.all()
     permission_classes = [IsAuthenticated]
     
@@ -113,6 +178,11 @@ class AccountViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Filter by tenant
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
         
         # Filter by account type
         account_type = self.request.query_params.get('type')
@@ -125,6 +195,10 @@ class AccountViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_active=is_active.lower() == 'true')
         
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        self._check_viewer_write(request)
+        return super().create(request, *args, **kwargs)
     
     @action(detail=False, methods=['get'])
     def chart_of_accounts(self, request):
