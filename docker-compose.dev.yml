@@ -17,10 +17,12 @@ services:
     ports:
       - "8000:8000"
       - "5678:5678"  # Debug port
+    depends_on: []  # 移除對 db 的依賴，避免 SQLite 開發報錯
 
-  # Enable PostgreSQL in development
-  db:
-    profiles: []  # Remove profile restriction to always start
+# 移除 PostgreSQL service
+# db:
+#   profiles: []  # 不需要
 
-  redis:
-    profiles: []
+# 移除 Redis service
+# redis:
+#   profiles: []
