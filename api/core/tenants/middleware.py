@@ -9,7 +9,18 @@ from django.utils.deprecation import MiddlewareMixin
 from django.utils.translation import gettext_lazy as _
 
 from .managers import set_current_tenant, clear_current_tenant, get_current_tenant
-from .models import Tenant, TenantMembership
+
+
+def get_tenant_model():
+    """Lazy import of Tenant model"""
+    from .models import Tenant
+    return Tenant
+
+
+def get_membership_model():
+    """Lazy import of TenantMembership model"""
+    from .models import TenantMembership
+    return TenantMembership
 
 
 class TenantMiddleware(MiddlewareMixin):
@@ -86,6 +97,8 @@ class TenantMiddleware(MiddlewareMixin):
     
     def _resolve_tenant(self, request):
         """Resolve tenant from request headers"""
+        Tenant = get_tenant_model()
+        
         # Try X-Tenant-ID header first
         tenant_id = request.headers.get('X-Tenant-ID')
         if tenant_id:
@@ -106,6 +119,7 @@ class TenantMiddleware(MiddlewareMixin):
     
     def _get_membership(self, user, tenant):
         """Get user's membership for a tenant"""
+        TenantMembership = get_membership_model()
         try:
             return TenantMembership.objects.select_related('tenant').get(
                 user=user,
@@ -117,6 +131,7 @@ class TenantMiddleware(MiddlewareMixin):
     
     def _get_default_tenant(self, user):
         """Get user's default/first tenant"""
+        TenantMembership = get_membership_model()
         membership = TenantMembership.objects.filter(
             user=user,
             is_active=True,

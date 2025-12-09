@@ -9,8 +9,13 @@ from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 
-from .models import TenantRole
 from .managers import get_current_tenant
+
+
+def get_tenant_role():
+    """Lazy import of TenantRole"""
+    from .models import TenantRole
+    return TenantRole
 
 
 def require_tenant(view_func):
@@ -49,6 +54,8 @@ def require_role(*allowed_roles):
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
+            TenantRole = get_tenant_role()
+            
             # First check tenant context
             if not hasattr(request, 'tenant') or request.tenant is None:
                 return JsonResponse({
@@ -153,6 +160,8 @@ class TenantRolePermission:
         self.allowed_roles = allowed_roles or []
     
     def has_permission(self, request, view):
+        TenantRole = get_tenant_role()
+        
         # Check tenant context
         if not hasattr(request, 'tenant') or request.tenant is None:
             return False

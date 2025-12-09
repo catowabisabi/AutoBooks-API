@@ -83,6 +83,7 @@ class Tenant(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'core'
         ordering = ['name']
         verbose_name = 'Tenant'
         verbose_name_plural = 'Tenants'
@@ -132,6 +133,7 @@ class TenantMembership(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        app_label = 'core'
         unique_together = ['tenant', 'user']
         ordering = ['tenant', '-role', 'user__email']
         verbose_name = 'Tenant Membership'
@@ -175,6 +177,7 @@ class TenantInvitation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        app_label = 'core'
         ordering = ['-created_at']
         verbose_name = 'Tenant Invitation'
         verbose_name_plural = 'Tenant Invitations'
