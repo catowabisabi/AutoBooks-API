@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'drf_spectacular_sidecar',
 
     # Local apps (feature-based)
-    'core',
+    'core.apps.CoreConfig',
     'users',
     'hrms',
     'documents',
