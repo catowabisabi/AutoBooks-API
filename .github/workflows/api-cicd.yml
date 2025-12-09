@@ -109,4 +109,4 @@ jobs:
             # 健康檢查 (使用 8001 端口)
             curl -f http://localhost:8001/api/v1/health/ || exit 1
             
-            echo "✅ Deployment successful! API running on port 8001"
+            echo "✅ Deployment successful! API running on port 8001" 
