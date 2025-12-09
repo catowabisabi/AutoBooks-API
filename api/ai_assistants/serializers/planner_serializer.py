@@ -2,6 +2,7 @@
 Planner AI Serializers
 """
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from ai_assistants.models import (
     PlannerTask, ScheduleEvent,
     TaskPriority, TaskStatus
@@ -88,6 +89,7 @@ class ScheduleEventSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
     def get_attendee_names(self, obj):
         return [u.get_full_name() for u in obj.attendees.all()]
 

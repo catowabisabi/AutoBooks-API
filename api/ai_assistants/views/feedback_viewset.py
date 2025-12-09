@@ -618,6 +618,7 @@ class RAGObservabilityDashboardViewSet(viewsets.ViewSet):
     - GET /rag-dashboard/realtime/ - Get real-time metrics
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = RAGObservabilityDashboardSerializer
     
     @action(detail=False, methods=['get'])
     def index(self, request):

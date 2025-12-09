@@ -5,6 +5,7 @@ DRF serializers for Tenant and Membership models.
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from django.utils import timezone
 from datetime import timedelta
 import secrets
@@ -14,7 +15,7 @@ from .models import Tenant, TenantMembership, TenantInvitation, TenantRole
 
 class TenantSerializer(serializers.ModelSerializer):
     """Full tenant serializer for admins"""
-    member_count = serializers.ReadOnlyField()
+    member_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Tenant
@@ -28,17 +29,26 @@ class TenantSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'member_count']
+    
+    @extend_schema_field(serializers.IntegerField())
+    def get_member_count(self, obj):
+        return obj.member_count
 
 
 class TenantListSerializer(serializers.ModelSerializer):
     """Lightweight tenant serializer for lists"""
-    member_count = serializers.ReadOnlyField()
+    member_count = serializers.SerializerMethodField()
     role = serializers.SerializerMethodField()
     
     class Meta:
         model = Tenant
         fields = ['id', 'name', 'slug', 'logo_url', 'member_count', 'role', 'subscription_plan']
     
+    @extend_schema_field(serializers.IntegerField())
+    def get_member_count(self, obj):
+        return obj.member_count
+    
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_role(self, obj):
         """Get current user's role in this tenant"""
         request = self.context.get('request')

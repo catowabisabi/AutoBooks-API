@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from core.libs.rag_service import get_knowledge_base
 from core.libs.ai_service import AIService
+from core.schema_serializers import RAGQueryRequestSerializer, RAGChatRequestSerializer
 
 
 class RAGQueryView(APIView):
@@ -16,6 +17,7 @@ class RAGQueryView(APIView):
     Returns relevant documentation based on the query.
     """
     permission_classes = [AllowAny]  # Allow public access to help docs
+    serializer_class = RAGQueryRequestSerializer
     
     def post(self, request):
         query = request.data.get('query', '')
@@ -58,6 +60,7 @@ class RAGChatView(APIView):
     Combines knowledge base context with AI generation.
     """
     permission_classes = [IsAuthenticated]  # Require authentication
+    serializer_class = RAGChatRequestSerializer
     
     def post(self, request):
         query = request.data.get('query', '')
@@ -125,6 +128,7 @@ class RAGKnowledgeListView(APIView):
     Useful for displaying help index.
     """
     permission_classes = [AllowAny]
+    serializer_class = RAGQueryRequestSerializer
     
     def get(self, request):
         category = request.query_params.get('category')

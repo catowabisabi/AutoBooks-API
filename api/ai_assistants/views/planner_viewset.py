@@ -31,6 +31,7 @@ from ai_assistants.services.planner_service import (
     ai_suggest_schedule,
     calculate_ai_priority_score,
 )
+from core.schema_serializers import PlannerDataResponseSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,8 @@ def get_permission_classes():
 
 # Legacy views for backward compatibility
 class StartDatasetLoadView(APIView):
+    serializer_class = PlannerDataResponseSerializer
+
     def get_permissions(self):
         return get_permission_classes()
     
@@ -60,6 +63,8 @@ class StartDatasetLoadView(APIView):
 
 
 class PlannerDataView(APIView):
+    serializer_class = PlannerDataResponseSerializer
+
     def get_permissions(self):
         return get_permission_classes()
     
@@ -74,6 +79,8 @@ class PlannerDataView(APIView):
 
 
 class PlannerQueryView(APIView):
+    serializer_class = PlannerQuerySerializer
+
     def get_permissions(self):
         return get_permission_classes()
     

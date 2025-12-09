@@ -26,6 +26,7 @@ from .serializers import (
     AcceptInvitationSerializer,
 )
 from .decorators import require_tenant, require_admin_access
+from core.schema_serializers import InvitationAcceptResponseSerializer
 
 
 class TenantViewSet(viewsets.ModelViewSet):
@@ -209,6 +210,7 @@ class InvitationViewSet(viewsets.ViewSet):
     accept: POST /tenant-invitations/{id}/accept/  - Accept an invitation
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = InvitationAcceptResponseSerializer
 
     def _get_tenant_context(self, request):
         """Get tenant and membership from request, resolving from headers if needed"""

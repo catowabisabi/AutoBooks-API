@@ -8,6 +8,7 @@ from ai_assistants.services.analyst_service import handle_query_logic, dataframe
 from ai_assistants.services.analyst_service import load_all_datasets
 from django.apps import apps
 from django.db import connection
+from core.schema_serializers import AnalystDataResponseSerializer
 import logging
 import time
 
@@ -36,6 +37,7 @@ class StartDatasetLoadView(APIView):
     """
     permission_classes = [AllowAny]  # Allow demo mode for unauthenticated users
     throttle_classes = [AnalystDataThrottle, AnonAnalystThrottle]
+    serializer_class = AnalystDataResponseSerializer
     
     def get(self, request):
         start_time = time.time()
@@ -69,6 +71,7 @@ class AnalystDataView(APIView):
     """
     permission_classes = [AllowAny]  # Allow demo mode
     throttle_classes = [AnalystDataThrottle, AnonAnalystThrottle]
+    serializer_class = AnalystDataResponseSerializer
     
     def get(self, request):
         df = dataframe_cache.get("analysis_data")
@@ -90,6 +93,7 @@ class AnalystSchemaView(APIView):
     """
     permission_classes = [AllowAny]
     throttle_classes = [AnalystDataThrottle]
+    serializer_class = AnalystDataResponseSerializer
     
     # Map Django field types to SQL-like types
     FIELD_TYPE_MAP = {
@@ -276,6 +280,7 @@ class AnalystDataStatusView(APIView):
     """
     permission_classes = [AllowAny]
     throttle_classes = [AnalystDataThrottle]
+    serializer_class = AnalystDataResponseSerializer
     
     def get(self, request):
         """Check data status and source"""
@@ -349,6 +354,7 @@ class AnalystQueryView(APIView):
     """
     permission_classes = [AllowAny]  # Allow demo mode
     throttle_classes = [AnalystQueryThrottle, AnonAnalystThrottle]
+    serializer_class = AnalystQuerySerializer
     
     def post(self, request):
         start_time = time.time()

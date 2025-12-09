@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import User, UserSettings, SubscriptionPlan, UserSubscription
 
 
@@ -58,6 +59,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             'is_active', 'is_popular', 'sort_order', 'features'
         ]
     
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_features(self, obj):
         """Return list of features for display"""
         features = []

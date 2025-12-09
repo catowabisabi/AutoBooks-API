@@ -50,6 +50,7 @@ from .serializers import (
     GenerateReportSerializer, ExportReportSerializer, UpdateReportSerializer, ReportDataSerializer
 )
 from .services import ReportGeneratorService, ReportExporterService, ReportCacheService
+from core.schema_serializers import BalanceSheetResponseSerializer
 
 
 class FiscalYearViewSet(viewsets.ModelViewSet):
@@ -629,6 +630,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
 class ReportViewSet(viewsets.ViewSet):
     """Financial reports generation"""
     permission_classes = [IsAuthenticated]
+    serializer_class = BalanceSheetResponseSerializer
     
     @action(detail=False, methods=['get'])
     def trial_balance(self, request):

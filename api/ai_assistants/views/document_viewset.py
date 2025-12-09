@@ -13,6 +13,7 @@ from ai_assistants.services.file_validation import (
     FileValidationError,
     MAX_FILE_SIZE,
 )
+from core.schema_serializers import DocumentUploadResponseSerializer, DocumentInfoResponseSerializer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 class DocumentUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated]
+    serializer_class = DocumentUploadResponseSerializer
 
     def post(self, request):
         file = request.FILES.get("file")
@@ -51,6 +53,8 @@ class DocumentUploadView(APIView):
 
 
 class DocumentInfoView(APIView):
+    serializer_class = DocumentInfoResponseSerializer
+
     def get(self, request, document_id):
         doc = document_cache.get(document_id)
         if not doc:
@@ -60,6 +64,8 @@ class DocumentInfoView(APIView):
 
 
 class DocumentQueryView(APIView):
+    serializer_class = DocumentQuerySerializer
+
     def post(self, request):
         serializer = DocumentQuerySerializer(data=request.data)
         if serializer.is_valid():
@@ -94,6 +100,7 @@ class CombinedDocumentProcessingView(APIView):
     """
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated]
+    serializer_class = CombinedDocumentSerializer
 
     def post(self, request):
         serializer = CombinedDocumentSerializer(data=request.data)

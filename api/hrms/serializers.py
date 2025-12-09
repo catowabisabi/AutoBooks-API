@@ -5,6 +5,7 @@ Serializers for Employees, Departments, Designations, Leaves, and Payroll.
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import (
     Department, Designation, Employee, LeaveApplication, LeaveBalance,
     PayrollPeriod, Payroll, PayrollItem, Project, Task, UserProjectMapping
@@ -32,9 +33,11 @@ class DepartmentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.IntegerField())
     def get_sub_departments_count(self, obj):
         return obj.sub_departments.count()
     
+    @extend_schema_field(serializers.IntegerField())
     def get_employees_count(self, obj):
         return obj.employees.count()
 
@@ -46,6 +49,7 @@ class DepartmentListSerializer(serializers.ModelSerializer):
         model = Department
         fields = ['id', 'name', 'code', 'employees_count', 'is_active']
     
+    @extend_schema_field(serializers.IntegerField())
     def get_employees_count(self, obj):
         return obj.employees.count()
 
@@ -143,6 +147,7 @@ class PayrollPeriodSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.IntegerField())
     def get_payroll_count(self, obj):
         return obj.payroll_records.count()
 
@@ -205,6 +210,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.IntegerField())
     def get_tasks_count(self, obj):
         return obj.tasks.count()
 

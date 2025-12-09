@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import extend_schema_field
 from .models import (
     FiscalYear, AccountingPeriod, Currency, TaxRate, Account,
     JournalEntry, JournalEntryLine, Contact, Invoice, InvoiceLine,
@@ -121,6 +122,7 @@ class ContactListSerializer(serializers.ModelSerializer):
         model = Contact
         fields = ['id', 'display_name', 'contact_type', 'email', 'phone']
     
+    @extend_schema_field(serializers.CharField())
     def get_display_name(self, obj):
         return obj.company_name or obj.contact_name
 
@@ -143,6 +145,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
         model = Invoice
         fields = '__all__'
     
+    @extend_schema_field(serializers.CharField())
     def get_contact_name(self, obj):
         return obj.contact.company_name or obj.contact.contact_name
 
@@ -157,6 +160,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
         fields = ['id', 'invoice_number', 'invoice_type', 'contact_name', 
                   'issue_date', 'due_date', 'total', 'amount_due', 'status', 'currency_code']
     
+    @extend_schema_field(serializers.CharField())
     def get_contact_name(self, obj):
         return obj.contact.company_name or obj.contact.contact_name
 
@@ -169,6 +173,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         model = Payment
         fields = '__all__'
     
+    @extend_schema_field(serializers.CharField())
     def get_contact_name(self, obj):
         return obj.contact.company_name or obj.contact.contact_name
 
@@ -221,6 +226,7 @@ class ProjectDocumentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'uploaded_by']
     
+    @extend_schema_field(serializers.CharField())
     def get_file_size_display(self, obj):
         """Return human-readable file size"""
         if obj.file_size < 1024:
@@ -276,20 +282,25 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'created_by']
     
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_client_name(self, obj):
         if obj.client:
             return obj.client.company_name or obj.client.contact_name
         return None
     
+    @extend_schema_field(serializers.IntegerField())
     def get_expense_count(self, obj):
         return obj.expenses.count()
     
+    @extend_schema_field(serializers.IntegerField())
     def get_invoice_count(self, obj):
         return obj.invoices.count()
     
+    @extend_schema_field(serializers.IntegerField())
     def get_journal_entry_count(self, obj):
         return obj.journal_entries.count()
     
+    @extend_schema_field(serializers.IntegerField())
     def get_document_count(self, obj):
         return obj.documents.count()
     
@@ -364,6 +375,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'is_active', 'created_at'
         ]
     
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_client_name(self, obj):
         if obj.client:
             return obj.client.company_name or obj.client.contact_name
@@ -498,6 +510,7 @@ class ReceiptSerializer(serializers.ModelSerializer):
             'uploaded_by', 'batch_id', 'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_file_url(self, obj):
         request = self.context.get('request')
         if obj.file and request:
@@ -527,6 +540,7 @@ class ReceiptListSerializer(serializers.ModelSerializer):
             'needs_manual_review', 'created_at'
         ]
     
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_file_url(self, obj):
         request = self.context.get('request')
         if obj.file and request:
@@ -905,6 +919,7 @@ class ReceiptWithFieldsSerializer(serializers.ModelSerializer):
             'is_active', 'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_file_url(self, obj):
         request = self.context.get('request')
         if obj.file and request:
@@ -942,6 +957,7 @@ class ReportTemplateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.CharField())
     def get_report_type_display(self, obj):
         type_labels = {
             'INCOME_STATEMENT': 'Income Statement',
@@ -982,6 +998,7 @@ class ReportSectionSerializer(serializers.ModelSerializer):
             'children'
         ]
     
+    @extend_schema_field(serializers.ListField())
     def get_children(self, obj):
         children = obj.children.all().order_by('sequence')
         return ReportSectionSerializer(children, many=True).data
@@ -1009,6 +1026,7 @@ class ReportExportSerializer(serializers.ModelSerializer):
             'exported_by', 'created_at'
         ]
     
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_file_url(self, obj):
         request = self.context.get('request')
         if obj.file and request:
@@ -1064,6 +1082,7 @@ class ReportSerializer(serializers.ModelSerializer):
             'last_viewed_at', 'view_count', 'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(serializers.CharField())
     def get_report_type_display(self, obj):
         type_labels = {
             'INCOME_STATEMENT': 'Income Statement',
@@ -1097,6 +1116,7 @@ class ReportListSerializer(serializers.ModelSerializer):
             'created_at'
         ]
     
+    @extend_schema_field(serializers.IntegerField())
     def get_export_count(self, obj):
         return obj.exports.count()
 

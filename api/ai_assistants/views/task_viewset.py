@@ -14,6 +14,7 @@ from django.utils import timezone
 from celery.result import AsyncResult
 
 from ai_assistants.models_tasks import AsyncTask, TaskStatus, TaskType
+from core.schema_serializers import TaskProgressResponseSerializer, AsyncTaskResponseSerializer
 
 
 class AsyncTaskSerializer:
@@ -52,6 +53,7 @@ class AsyncTaskViewSet(viewsets.ViewSet):
     - GET /tasks/stats/ - Get task statistics
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = AsyncTaskResponseSerializer
     
     def list(self, request):
         """List user's tasks"""
@@ -215,6 +217,7 @@ class TaskProgressView(APIView):
     GET /api/ai/task-status/<task_id>/
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = TaskProgressResponseSerializer
     
     def get(self, request, task_id):
         """Get task progress by Celery task ID"""

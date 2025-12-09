@@ -10,6 +10,7 @@ from .serializers import (
     UserSettingsSerializer, SubscriptionPlanSerializer, UserSubscriptionSerializer,
     UserRegistrationSerializer
 )
+from core.schema_serializers import UserSettingsResponseSerializer, UserSubscriptionResponseSerializer
 
 
 class IsAdminUser(BasePermission):
@@ -185,6 +186,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class UserSettingsViewSet(viewsets.ViewSet):
     """ViewSet for user settings (notifications, billing)"""
     permission_classes = [IsAuthenticated]
+    serializer_class = UserSettingsResponseSerializer
 
     def list(self, request):
         """Get current user's settings"""
@@ -284,6 +286,7 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
 class UserSubscriptionViewSet(viewsets.ViewSet):
     """ViewSet for user subscription management"""
     permission_classes = [IsAuthenticated]
+    serializer_class = UserSubscriptionResponseSerializer
     
     def list(self, request):
         """Get current user's subscription"""

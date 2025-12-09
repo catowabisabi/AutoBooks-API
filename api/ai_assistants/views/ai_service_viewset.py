@@ -11,6 +11,7 @@ from django.conf import settings
 import base64
 
 from core.libs.ai_service import AIService, AIProvider, get_ai_service
+from core.schema_serializers import AIChatRequestSerializer
 
 
 class AIServiceViewSet(viewsets.ViewSet):
@@ -26,6 +27,7 @@ class AIServiceViewSet(viewsets.ViewSet):
     """
     permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser, MultiPartParser]
+    serializer_class = AIChatRequestSerializer
     
     @action(detail=False, methods=['post'])
     def chat(self, request):

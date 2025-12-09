@@ -296,6 +296,7 @@ class BMIDocumentViewSet(viewsets.ModelViewSet):
 
 # Dashboard Overview View
 from django.utils import timezone
+from core.schema_serializers import DashboardOverviewResponseSerializer
 
 
 class DashboardOverviewView(APIView):
@@ -304,6 +305,7 @@ class DashboardOverviewView(APIView):
     GET /api/v1/business/dashboard/
     """
     permission_classes = get_permission_classes()
+    serializer_class = DashboardOverviewResponseSerializer
     
     def get(self, request):
         # Audit stats

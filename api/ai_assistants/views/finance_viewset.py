@@ -5,11 +5,13 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 import json
 from ai_assistants.services.finance_service import ReceiptAnalyzerService
+from core.schema_serializers import ReceiptAnalyzeRequestSerializer
 
 
 class ReceiptAnalyzerViewSet(viewsets.ViewSet):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     permission_classes = [IsAuthenticated]
+    serializer_class = ReceiptAnalyzeRequestSerializer
     
     @action(detail=False, methods=['post'], url_path='analyze')
     def analyze_receipt(self, request):

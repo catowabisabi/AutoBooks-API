@@ -87,6 +87,7 @@ class AccountingAssistantViewSet(viewsets.ViewSet):
     """
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    serializer_class = ReceiptUploadSerializer
     
     # =========================================================================
     # Receipt Upload and Analysis / 收據上傳和分析

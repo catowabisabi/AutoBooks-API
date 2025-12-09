@@ -5,6 +5,7 @@ Serializers for sign-up, forgot-password, account-lock flows.
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.utils.translation import gettext_lazy as _
@@ -204,7 +205,7 @@ class AccountLockSerializer(serializers.ModelSerializer):
     帳號鎖定序列化器
     """
     user_email = serializers.EmailField(source='user.email', read_only=True)
-    is_active = serializers.ReadOnlyField()
+    is_active = serializers.SerializerMethodField()
     
     class Meta:
         model = AccountLock
@@ -213,6 +214,10 @@ class AccountLockSerializer(serializers.ModelSerializer):
             'locked_until', 'unlocked_at', 'is_active', 'notes'
         ]
         read_only_fields = ['id', 'locked_at', 'unlocked_at']
+    
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_active(self, obj):
+        return obj.is_active
 
 
 class LockAccountSerializer(serializers.Serializer):

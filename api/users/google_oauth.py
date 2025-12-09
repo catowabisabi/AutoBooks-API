@@ -11,11 +11,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
+from core.schema_serializers import GoogleOAuthRequestSerializer
 
 
 class GoogleOAuthURLView(APIView):
     """Generate Google OAuth URL for frontend"""
     permission_classes = [AllowAny]
+    serializer_class = GoogleOAuthRequestSerializer
     
     def get(self, request):
         client_id = settings.GOOGLE_OAUTH_CLIENT_ID
@@ -44,6 +46,7 @@ class GoogleOAuthURLView(APIView):
 class GoogleOAuthCallbackView(APIView):
     """Handle Google OAuth callback"""
     permission_classes = [AllowAny]
+    serializer_class = GoogleOAuthRequestSerializer
     
     def get(self, request):
         code = request.query_params.get('code')
@@ -197,6 +200,7 @@ class GoogleOAuthCallbackView(APIView):
 class GoogleOAuthTokenView(APIView):
     """Exchange Google OAuth tokens for JWT (for frontend-based OAuth)"""
     permission_classes = [AllowAny]
+    serializer_class = GoogleOAuthRequestSerializer
     
     def post(self, request):
         """

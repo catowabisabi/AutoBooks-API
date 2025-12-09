@@ -4,6 +4,7 @@ Accounting Assistant Serializers
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from ai_assistants.models import (
     Receipt, ReceiptComparison, ExpenseReport, 
     AccountingProject, FieldExtraction,
@@ -163,6 +164,7 @@ class ExpenseReportSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'report_number', 'created_by', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.IntegerField())
     def get_receipt_count(self, obj):
         return obj.receipts.count()
 
@@ -198,6 +200,7 @@ class AccountingProjectListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.IntegerField())
     def get_receipt_count(self, obj):
         return obj.receipts.count()
 
@@ -226,12 +229,15 @@ class AccountingProjectDetailSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
     def get_team_member_names(self, obj):
         return [m.full_name for m in obj.team_members.all()]
     
+    @extend_schema_field(serializers.IntegerField())
     def get_receipt_count(self, obj):
         return obj.receipts.count()
     
+    @extend_schema_field(serializers.DictField())
     def get_receipt_stats(self, obj):
         """Return receipt statistics by status"""
         from django.db.models import Count

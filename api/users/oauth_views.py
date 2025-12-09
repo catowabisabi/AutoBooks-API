@@ -13,6 +13,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from core.schema_serializers import GoogleOAuthRequestSerializer
 
 User = get_user_model()
 
@@ -25,6 +26,7 @@ class GoogleOAuthView(APIView):
     - 'credential': ID token from Google Sign-In (for JavaScript SDK)
     """
     permission_classes = [AllowAny]
+    serializer_class = GoogleOAuthRequestSerializer
     
     def post(self, request):
         code = request.data.get('code')

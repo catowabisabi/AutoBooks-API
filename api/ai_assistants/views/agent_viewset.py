@@ -29,6 +29,7 @@ from ai_assistants.agents.ai_tools import (
     AIToolRegistry,
     BusinessToolExecutor,
 )
+from core.schema_serializers import AIAgentChatRequestSerializer
 
 
 class AIAgentViewSet(viewsets.ViewSet):
@@ -45,6 +46,7 @@ class AIAgentViewSet(viewsets.ViewSet):
     """
     
     permission_classes = [IsAuthenticated]
+    serializer_class = AIAgentChatRequestSerializer
     
     def get_permissions(self):
         """Allow public access to tools endpoint for testing"""

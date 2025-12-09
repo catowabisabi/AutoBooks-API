@@ -9,11 +9,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 import openai
+from core.schema_serializers import ApiKeyRequestSerializer
 
 
 class ApiKeyStatusView(APIView):
     """Get the status of configured API keys"""
     permission_classes = [IsAuthenticated]
+    serializer_class = ApiKeyRequestSerializer
     
     def get(self, request):
         """Return which API keys are configured"""
@@ -27,6 +29,7 @@ class ApiKeyStatusView(APIView):
 class ApiKeyManageView(APIView):
     """Save or delete API keys"""
     permission_classes = [IsAuthenticated]
+    serializer_class = ApiKeyRequestSerializer
     
     def post(self, request, provider):
         """Save an API key for a provider"""
@@ -154,6 +157,7 @@ class ApiKeyManageView(APIView):
 class ApiKeyTestView(APIView):
     """Test if an API key is valid"""
     permission_classes = [IsAuthenticated]
+    serializer_class = ApiKeyRequestSerializer
     
     def post(self, request, provider):
         """Test an API key by making a simple API call"""

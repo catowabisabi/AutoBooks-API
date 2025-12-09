@@ -5,6 +5,7 @@ Serializers for AI feedback and result logging.
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from ..models_feedback import AIFeedback, AIResultLog, AIFeedbackType
 
 
@@ -107,6 +108,7 @@ class AIResultLogSerializer(serializers.ModelSerializer):
             'negative_feedback_count',
         ]
     
+    @extend_schema_field(serializers.BooleanField())
     def get_has_low_confidence(self, obj):
         """Check if any field has low confidence (below 0.7)"""
         if not obj.extracted_fields:
@@ -212,6 +214,7 @@ class AIRequestLogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at']
     
+    @extend_schema_field(serializers.FloatField())
     def get_cost_usd(self, obj):
         """Convert cents to USD"""
         return obj.estimated_cost_cents / 100 if obj.estimated_cost_cents else 0
@@ -285,6 +288,7 @@ class VectorSearchLogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'is_empty_result', 'is_low_quality']
     
+    @extend_schema_field(serializers.CharField())
     def get_quality_indicator(self, obj):
         """Return quality indicator: GOOD, FAIR, POOR"""
         if obj.is_empty_result:
@@ -423,9 +427,11 @@ class AIUsageSummarySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at']
     
+    @extend_schema_field(serializers.FloatField())
     def get_cost_usd(self, obj):
         return obj.total_cost_cents / 100 if obj.total_cost_cents else 0
     
+    @extend_schema_field(serializers.FloatField())
     def get_success_rate(self, obj):
         if obj.total_requests > 0:
             return round(obj.successful_requests / obj.total_requests * 100, 2)

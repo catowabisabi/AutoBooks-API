@@ -24,9 +24,18 @@ from .auth_serializers import (
     UnlockAccountSerializer,
     AccountLockSerializer,
 )
+from core.schema_serializers import (
+    SignUpRequestSerializer,
+    ForgotPasswordRequestSerializer,
+    ResetPasswordRequestSerializer,
+    ChangePasswordRequestSerializer,
+    LockAccountRequestSerializer,
+    UnlockAccountRequestSerializer,
+)
 
 
 class SignUpView(APIView):
+    serializer_class = SignUpRequestSerializer
     """
     POST /auth/signup/
     
@@ -77,6 +86,7 @@ class ForgotPasswordView(APIView):
     忘記密碼請求端點
     """
     permission_classes = [AllowAny]
+    serializer_class = ForgotPasswordRequestSerializer
     
     def post(self, request):
         lang = request.data.get('language', request.headers.get('Accept-Language', 'en'))
@@ -113,6 +123,7 @@ class ResetPasswordView(APIView):
     密碼重設端點
     """
     permission_classes = [AllowAny]
+    serializer_class = ResetPasswordRequestSerializer
     
     def post(self, request):
         lang = request.data.get('language', request.headers.get('Accept-Language', 'en'))
@@ -141,6 +152,7 @@ class ChangePasswordView(APIView):
     更改密碼端點 (需登入)
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordRequestSerializer
     
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
@@ -167,6 +179,7 @@ class AccountLockStatusView(APIView):
     檢查帳號鎖定狀態
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = AccountLockSerializer
     
     def get(self, request, user_id=None):
         if user_id:
@@ -205,6 +218,7 @@ class LockAccountView(APIView):
     鎖定帳號 (管理員)
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = LockAccountRequestSerializer
     
     def post(self, request):
         # Admin only
@@ -238,6 +252,7 @@ class UnlockAccountView(APIView):
     解鎖帳號 (管理員)
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = UnlockAccountRequestSerializer
     
     def post(self, request):
         # Admin only
@@ -272,6 +287,7 @@ class LoginAttemptsView(APIView):
     查看登入嘗試記錄 (管理員)
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = AccountLockSerializer
     
     def get(self, request, user_id=None):
         # Admin only for viewing other users

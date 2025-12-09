@@ -3,6 +3,7 @@
 Brainstorming Assistant Serializers
 """
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from ai_assistants.models import (
     BrainstormSession, BrainstormIdea,
     BrainstormMeeting, BrainstormMeetingParticipant,
@@ -31,6 +32,7 @@ class BrainstormSessionSerializer(serializers.ModelSerializer):
             'ai_response', 'ai_structured_output'
         ]
     
+    @extend_schema_field(serializers.ListField())
     def get_ideas(self, obj):
         return BrainstormIdeaSerializer(obj.ideas.all(), many=True).data
 
@@ -47,6 +49,7 @@ class BrainstormSessionListSerializer(serializers.ModelSerializer):
             'created_at'
         ]
     
+    @extend_schema_field(serializers.IntegerField())
     def get_ideas_count(self, obj):
         return obj.ideas.count()
 
@@ -192,6 +195,7 @@ class BrainstormMeetingParticipantSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.CharField())
     def get_display_name(self, obj):
         if obj.is_external:
             return obj.external_name
@@ -217,6 +221,7 @@ class BrainstormMeetingParticipantListSerializer(serializers.ModelSerializer):
         model = BrainstormMeetingParticipant
         fields = ['id', 'user', 'user_name', 'display_name', 'role', 'status', 'is_external']
     
+    @extend_schema_field(serializers.CharField())
     def get_display_name(self, obj):
         if obj.is_external:
             return obj.external_name
@@ -249,6 +254,7 @@ class BrainstormMeetingSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'participant_count', 'duration_minutes', 'created_at', 'updated_at']
     
+    @extend_schema_field(serializers.ListField())
     def get_participants_list(self, obj):
         return BrainstormMeetingParticipantListSerializer(
             obj.participants.all(), many=True

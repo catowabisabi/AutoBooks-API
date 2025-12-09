@@ -22,6 +22,7 @@ from .serializers import (
     KPIMetricSerializer, KPIMetricListSerializer,
     ReportScheduleSerializer
 )
+from core.schema_serializers import AnalyticsDashboardResponseSerializer
 
 
 # Allow anonymous access in DEBUG mode for development
@@ -186,6 +187,7 @@ class AnalyticsDashboardView(APIView):
     GET /api/v1/analytics/overview/
     """
     permission_classes = get_permission_classes()
+    serializer_class = AnalyticsDashboardResponseSerializer
     
     def get(self, request):
         from django.utils import timezone

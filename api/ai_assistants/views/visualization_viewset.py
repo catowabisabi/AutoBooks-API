@@ -5,7 +5,7 @@ Visualization ViewSet - Chart Generation API Endpoints
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from django.core.files.storage import default_storage
@@ -29,13 +29,58 @@ from ai_assistants.services.file_validation import (
     FileValidationError,
     MAX_CSV_SIZE,
 )
+from core.schema_serializers import ChartTypesResponseSerializer
 
 logger = logging.getLogger(__name__)
 
 
+# Serializers used for schema generation and request validation hints
+class AnalyzeDataSerializer(serializers.Serializer):
+    data = serializers.JSONField()
+
+
+class GenerateChartSerializer(serializers.Serializer):
+    data = serializers.JSONField()
+    type = serializers.ChoiceField(choices=list(CHART_TYPES.keys()), default='bar')
+    title = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    xKey = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    yKey = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    labelKey = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    valueKey = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class GenerateChartWithAISerializer(GenerateChartSerializer):
+    prompt = serializers.CharField()
+    language = serializers.CharField(default='en')
+
+
+class DocumentChartRequestSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=list(CHART_TYPES.keys()), default='bar')
+    title = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    xKey = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    yKey = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    labelKey = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    valueKey = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class FileVisualizationSerializer(serializers.Serializer):
+    file = serializers.FileField()
+
+
+class DashboardChartsSerializer(serializers.Serializer):
+    data = serializers.JSONField()
+    max_charts = serializers.IntegerField(required=False, default=4, min_value=1)
+
+
+class QuickChartSerializer(serializers.Serializer):
+    data = serializers.JSONField()
+
+
 class ChartTypesView(APIView):
     """List all available chart types / 列出所有可用的圖表類型"""
-    
+    serializer_class = ChartTypesResponseSerializer
+
     def get(self, request):
         return Response({
             'chart_types': CHART_TYPES,
@@ -46,6 +91,7 @@ class ChartTypesView(APIView):
 class AnalyzeDataView(APIView):
     """Analyze data structure and suggest chart types / 分析數據結構並建議圖表類型"""
     parser_classes = [JSONParser]
+    serializer_class = AnalyzeDataSerializer
     
     def post(self, request):
         data = request.data.get('data', [])
@@ -68,6 +114,7 @@ class AnalyzeDataView(APIView):
 class GenerateChartView(APIView):
     """Generate a chart configuration from data / 從數據生成圖表配置"""
     parser_classes = [JSONParser]
+    serializer_class = GenerateChartSerializer
     
     def post(self, request):
         data = request.data.get('data', [])
@@ -111,6 +158,7 @@ class GenerateChartView(APIView):
 class GenerateChartWithAIView(APIView):
     """Use AI to generate optimal chart based on natural language request / 使用 AI 根據自然語言請求生成最佳圖表"""
     parser_classes = [JSONParser]
+    serializer_class = GenerateChartWithAISerializer
     
     def post(self, request):
         data = request.data.get('data', [])
@@ -143,6 +191,7 @@ class GenerateChartWithAIView(APIView):
 
 class DocumentChartView(APIView):
     """Extract chart data from a document / 從文件中提取圖表數據"""
+    serializer_class = DocumentChartRequestSerializer
     
     def get(self, request, document_id):
         result = extract_chart_data_from_document(document_id)
@@ -194,6 +243,7 @@ class FileVisualizationView(APIView):
     """Upload and visualize a file / 上傳並視覺化文件"""
     parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsAuthenticated]
+    serializer_class = FileVisualizationSerializer
     
     def post(self, request):
         file = request.FILES.get('file')
@@ -250,6 +300,7 @@ class FileVisualizationView(APIView):
 class DashboardChartsView(APIView):
     """Generate multiple charts for dashboard / 為儀表板生成多個圖表"""
     parser_classes = [JSONParser]
+    serializer_class = DashboardChartsSerializer
     
     def post(self, request):
         data = request.data.get('data', [])
@@ -272,6 +323,7 @@ class DashboardChartsView(APIView):
 class QuickChartView(APIView):
     """Quick chart generation with minimal configuration / 使用最少配置快速生成圖表"""
     parser_classes = [JSONParser]
+    serializer_class = QuickChartSerializer
     
     def post(self, request):
         data = request.data.get('data', [])

@@ -376,12 +376,16 @@ class UserProjectMappingViewSet(viewsets.ModelViewSet):
 
 
 # Dashboard Overview for HRMS
+from core.schema_serializers import HRMSDashboardResponseSerializer
+
+
 class HRMSDashboardView(APIView):
     """
     Get HRMS dashboard overview
     GET /api/v1/hrms/dashboard/
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = HRMSDashboardResponseSerializer
     
     def get(self, request):
         employees = Employee.objects.all()
