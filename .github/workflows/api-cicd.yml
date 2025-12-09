@@ -69,11 +69,7 @@ jobs:
           python manage.py migrate
           pytest --cov=. --cov-report=xml -v
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./api/coverage.xml
-          fail_ci_if_error: false
+      # Codecov upload removed — no external coverage reporting
 
   # =========================
   # Deploy to Development (使用 standalone)
