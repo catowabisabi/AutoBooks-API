@@ -8,16 +8,17 @@ services:
   api:
     build:
       target: development
+    env_file:
+      - .env
     environment:
       - DJANGO_DEBUG=True
-      - BUILD_TARGET=development
+      - DATABASE_ENGINE=sqlite
     volumes:
       - ./api:/app:cached
     command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
-      - "5678:5678"  # Debug port
-    depends_on: []  # 移除對 db 的依賴，避免 SQLite 開發報錯
+
 
 # 移除 PostgreSQL service
 # db:
