@@ -1,0 +1,26 @@
+# ===================================
+# AutoBooks-API Docker Compose (Development)
+# Override file for local development with hot-reload
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ===================================
+
+services:
+  api:
+    build:
+      target: development
+    environment:
+      - DJANGO_DEBUG=True
+      - BUILD_TARGET=development
+    volumes:
+      - ./api:/app:cached
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Debug port
+
+  # Enable PostgreSQL in development
+  db:
+    profiles: []  # Remove profile restriction to always start
+
+  redis:
+    profiles: []

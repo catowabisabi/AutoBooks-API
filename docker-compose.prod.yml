@@ -1,0 +1,52 @@
+# ===================================
+# AutoBooks-API Docker Compose (Production)
+# Override file for production deployment
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ===================================
+
+services:
+  api:
+    build:
+      target: production
+    environment:
+      - DJANGO_DEBUG=False
+      - BUILD_TARGET=production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  db:
+    profiles: []  # Enable PostgreSQL in production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  redis:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  celery:
+    profiles: []  # Enable Celery in production
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  celery-beat:
+    profiles: []  # Enable Celery Beat in production
+    restart: always

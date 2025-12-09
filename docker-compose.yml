@@ -1,0 +1,161 @@
+# ===================================
+# AutoBooks-API Docker Compose
+# Supports: PostgreSQL / SQLite
+# ===================================
+
+services:
+  # ===================================
+  # Django API Service
+  # ===================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-production}
+    container_name: autobooks-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - DATABASE_ENGINE=${DATABASE_ENGINE:-sqlite}
+      - DATABASE_NAME=${DATABASE_NAME:-wisematic_erp}
+      - DATABASE_USER=${DATABASE_USER:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_HOST=${DATABASE_HOST:-db}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./api:/app
+      - api_static:/app/staticfiles
+      - api_media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - autobooks-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ===================================
+  # PostgreSQL Database (Optional)
+  # ===================================
+  db:
+    image: postgres:16-alpine
+    container_name: autobooks-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME:-wisematic_erp}
+      - POSTGRES_USER=${DATABASE_USER:-postgres}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - autobooks-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-wisematic_erp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - postgres
+
+  # ===================================
+  # Redis Cache
+  # ===================================
+  redis:
+    image: redis:7-alpine
+    container_name: autobooks-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - autobooks-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===================================
+  # Celery Worker (Background Tasks)
+  # ===================================
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-production}
+    container_name: autobooks-celery
+    restart: unless-stopped
+    command: celery -A core worker -l info
+    env_file:
+      - .env
+    environment:
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./api:/app
+    depends_on:
+      - api
+      - redis
+    networks:
+      - autobooks-network
+    profiles:
+      - celery
+
+  # ===================================
+  # Celery Beat (Scheduled Tasks)
+  # ===================================
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-production}
+    container_name: autobooks-celery-beat
+    restart: unless-stopped
+    command: celery -A core beat -l info
+    env_file:
+      - .env
+    environment:
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./api:/app
+    depends_on:
+      - api
+      - redis
+    networks:
+      - autobooks-network
+    profiles:
+      - celery
+
+# ===================================
+# Networks
+# ===================================
+networks:
+  autobooks-network:
+    driver: bridge
+
+# ===================================
+# Volumes
+# ===================================
+volumes:
+  postgres_data:
+  redis_data:
+  api_static:
+  api_media:

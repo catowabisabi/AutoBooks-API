@@ -1,5 +1,10 @@
 # ===================================
 # AutoBooks-API Dockerfile (Django)
+# Multi-stage build for optimized production image
+# ===================================
+
+# ===================================
+# Base Stage - Common dependencies
 # ===================================
 FROM python:3.11-slim AS base
 
@@ -7,7 +12,8 @@ FROM python:3.11-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    POETRY_NO_INTERACTION=1
 
 # Set working directory
 WORKDIR /app
@@ -29,6 +35,30 @@ FROM base AS dependencies
 COPY api/requirements.txt /app/
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
+
+# ===================================
+# Development Stage
+# ===================================
+FROM base AS development
+
+# Copy installed packages from dependencies stage
+COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+
+# Install development dependencies
+RUN pip install watchfiles debugpy
+
+# Copy application code
+COPY api/ /app/
+
+# Create necessary directories
+RUN mkdir -p /app/staticfiles /app/media
+
+# Expose ports (8000 for app, 5678 for debugger)
+EXPOSE 8000 5678
+
+# Start the Django development server with auto-reload
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 # ===================================
 # Production Stage

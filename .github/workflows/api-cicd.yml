@@ -1,0 +1,251 @@
+# ===================================
+# AutoBooks-API CI/CD Pipeline
+# Build, Push, and Deploy to Hostinger VPS
+# Supports: dev / prod environments
+# ===================================
+
+name: AutoBooks-API CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'api/**'
+      - 'Dockerfile'
+      - 'docker-compose*.yml'
+      - '.github/workflows/api-cicd.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/autobooks-api
+
+jobs:
+  # ===================================
+  # Test Job
+  # ===================================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: ./api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: ./api
+        env:
+          DJANGO_SECRET_KEY: test-secret-key
+          DJANGO_DEBUG: 'True'
+          DATABASE_ENGINE: postgresql
+          DATABASE_NAME: test_db
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+        run: |
+          python manage.py migrate
+          pytest --cov=. --cov-report=xml -v
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./api/coverage.xml
+          fail_ci_if_error: false
+
+  # ===================================
+  # Build and Push Job
+  # ===================================
+  build:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+    
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_OUTPUT
+            echo "TAG_SUFFIX=latest" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT
+            echo "TAG_SUFFIX=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.set-env.outputs.TAG_SUFFIX }}
+            type=sha,prefix=${{ steps.set-env.outputs.ENVIRONMENT }}-
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+
+  # ===================================
+  # Deploy to Development
+  # ===================================
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    
+    steps:
+      - name: Deploy to Hostinger VPS (Dev)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /opt/autobooks-api-dev
+            
+            # Pull latest image
+            docker pull ${{ env.IMAGE_NAME }}:dev
+            
+            # Update environment file
+            echo "Updating environment..."
+            
+            # Stop and restart with new image
+            docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+            docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+            
+            # Cleanup old images
+            docker image prune -f
+            
+            # Health check
+            sleep 10
+            curl -f http://localhost:8000/api/v1/health/ || exit 1
+            
+            echo "Development deployment completed!"
+
+  # ===================================
+  # Deploy to Production
+  # ===================================
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+      - name: Deploy to Hostinger VPS (Prod)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /opt/autobooks-api
+            
+            # Pull latest image
+            docker pull ${{ env.IMAGE_NAME }}:latest
+            
+            # Backup database before deployment
+            docker exec autobooks-db pg_dump -U postgres wisematic_erp > backup_$(date +%Y%m%d_%H%M%S).sql || true
+            
+            # Stop and restart with new image
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            
+            # Cleanup old images
+            docker image prune -f
+            
+            # Health check with retry
+            for i in {1..5}; do
+              sleep 10
+              if curl -f http://localhost:8000/api/v1/health/; then
+                echo "Production deployment completed!"
+                exit 0
+              fi
+              echo "Health check attempt $i failed, retrying..."
+            done
+            
+            echo "Health check failed after 5 attempts"
+            exit 1
+
+  # ===================================
+  # Notify on Completion
+  # ===================================
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-dev, deploy-prod]
+    if: always() && (needs.deploy-dev.result != 'skipped' || needs.deploy-prod.result != 'skipped')
+    
+    steps:
+      - name: Send notification
+        run: |
+          if [[ "${{ needs.deploy-dev.result }}" == "success" ]] || [[ "${{ needs.deploy-prod.result }}" == "success" ]]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi
