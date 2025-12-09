@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # =================================================================
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-change-this-in-production')
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,93.127.215.144').split(',')
 
 AUTH_USER_MODEL = 'users.User'
 
