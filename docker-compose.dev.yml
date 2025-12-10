@@ -27,4 +27,4 @@ services:
       
   redis:
     profiles:
-      - disabled
+      - disabled 
