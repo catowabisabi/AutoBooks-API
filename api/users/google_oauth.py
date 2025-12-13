@@ -10,10 +10,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from drf_spectacular.utils import extend_schema
 from users.models import User
 from core.schema_serializers import GoogleOAuthRequestSerializer
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='獲取 Google OAuth URL / Get Google OAuth URL',
+    description='獲取 Google OAuth 認證 URL 以便前端導向登入。\n\nGet Google OAuth URL for frontend redirect login.'
+)
 class GoogleOAuthURLView(APIView):
     """Generate Google OAuth URL for frontend"""
     permission_classes = [AllowAny]
@@ -43,6 +49,11 @@ class GoogleOAuthURLView(APIView):
         return Response({'url': oauth_url})
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='Google OAuth 回調 / Google OAuth Callback',
+    description='處理 Google OAuth 回調，交換授權碼獲取 Token。\n\nHandle Google OAuth callback, exchange authorization code for tokens.'
+)
 class GoogleOAuthCallbackView(APIView):
     """Handle Google OAuth callback"""
     permission_classes = [AllowAny]
@@ -197,6 +208,11 @@ class GoogleOAuthCallbackView(APIView):
         return user
 
 
+@extend_schema(
+    tags=['Authentication'],
+    summary='Google Token 交換 JWT / Exchange Google Token for JWT',
+    description='前端發送 Google token，驗證後返回 JWT Token。\n\nFrontend sends Google token, verify and return JWT Token.'
+)
 class GoogleOAuthTokenView(APIView):
     """Exchange Google OAuth tokens for JWT (for frontend-based OAuth)"""
     permission_classes = [AllowAny]

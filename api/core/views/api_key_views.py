@@ -8,15 +8,21 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema
 import openai
 from core.schema_serializers import ApiKeyRequestSerializer
 
 
+@extend_schema(tags=['Settings'])
 class ApiKeyStatusView(APIView):
     """Get the status of configured API keys"""
     permission_classes = [IsAuthenticated]
     serializer_class = ApiKeyRequestSerializer
     
+    @extend_schema(
+        summary='獲取 API 金鑰狀態 / Get API key status',
+        description='檢查各 AI 服務商的 API 金鑰是否已配置。\n\nCheck if API keys are configured for each AI provider.'
+    )
     def get(self, request):
         """Return which API keys are configured"""
         return Response({
@@ -26,11 +32,16 @@ class ApiKeyStatusView(APIView):
         })
 
 
+@extend_schema(tags=['Settings'])
 class ApiKeyManageView(APIView):
     """Save or delete API keys"""
     permission_classes = [IsAuthenticated]
     serializer_class = ApiKeyRequestSerializer
     
+    @extend_schema(
+        summary='儲存 API 金鑰 / Save API key',
+        description='儲存指定服務商的 API 金鑰。\n\nSave API key for specified provider.'
+    )
     def post(self, request, provider):
         """Save an API key for a provider"""
         if not request.user.is_staff:
@@ -154,11 +165,16 @@ class ApiKeyManageView(APIView):
             print(f'Warning: Could not update .env file: {e}')
 
 
+@extend_schema(tags=['Settings'])
 class ApiKeyTestView(APIView):
     """Test if an API key is valid"""
     permission_classes = [IsAuthenticated]
     serializer_class = ApiKeyRequestSerializer
     
+    @extend_schema(
+        summary='測試 API 金鑰 / Test API key',
+        description='測試指定服務商的 API 金鑰是否有效。\n\nTest if API key is valid for specified provider.'
+    )
     def post(self, request, provider):
         """Test an API key by making a simple API call"""
         if provider == 'openai':

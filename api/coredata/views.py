@@ -7,6 +7,9 @@ from .constants import CURRENCIES, COUNTRIES, TIMEZONES
 
 
 @extend_schema(
+    tags=['Core Data'],
+    summary='列出貨幣 / List currencies',
+    description='獲取系統支持的貨幣列表。\n\nGet list of supported currencies.',
     responses=inline_serializer(
         name='CurrencyListResponse',
         fields={
@@ -27,6 +30,9 @@ def currency_list(request):
 
 
 @extend_schema(
+    tags=['Core Data'],
+    summary='列出國家 / List countries',
+    description='獲取系統支持的國家列表。\n\nGet list of supported countries.',
     responses=inline_serializer(
         name='CountryListResponse',
         fields={
@@ -47,6 +53,9 @@ def country_list(request):
 
 
 @extend_schema(
+    tags=['Core Data'],
+    summary='列出時區 / List timezones',
+    description='獲取系統支持的時區列表。\n\nGet list of supported timezones.',
     responses=inline_serializer(
         name='TimezoneListResponse',
         fields={

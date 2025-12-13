@@ -231,6 +231,23 @@ class UserViewSet(viewsets.ModelViewSet):
         })
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['User Settings'],
+        summary='獲取用戶設定 / Get user settings',
+        description='獲取當前用戶的所有設定。\n\nGet current user\'s all settings.'
+    ),
+    update_notifications=extend_schema(
+        tags=['User Settings'],
+        summary='更新通知設定 / Update notification settings',
+        description='更新用戶的通知偏好設定。\n\nUpdate user notification preferences.'
+    ),
+    update_billing=extend_schema(
+        tags=['User Settings'],
+        summary='更新帳單設定 / Update billing settings',
+        description='更新用戶的帳單資訊。\n\nUpdate user billing information.'
+    ),
+)
 class UserSettingsViewSet(viewsets.ViewSet):
     """ViewSet for user settings (notifications, billing)"""
     permission_classes = [IsAuthenticated]
@@ -300,6 +317,18 @@ class UserSettingsViewSet(viewsets.ViewSet):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Subscriptions'],
+        summary='列出訂閱方案 / List subscription plans',
+        description='獲取所有可用的訂閱方案列表。\n\nGet all available subscription plans.'
+    ),
+    retrieve=extend_schema(
+        tags=['Subscriptions'],
+        summary='獲取訂閱方案詳情 / Get plan details',
+        description='根據 ID 獲取訂閱方案詳情。\n\nGet subscription plan details by ID.'
+    ),
+)
 class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for subscription plans (public read-only)"""
     queryset = SubscriptionPlan.objects.filter(is_active=True).order_by('sort_order')
@@ -331,6 +360,23 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
             }, status=status.HTTP_404_NOT_FOUND)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Subscriptions'],
+        summary='獲取當前訂閱 / Get current subscription',
+        description='獲取當前用戶的訂閱狀態。\n\nGet current user\'s subscription status.'
+    ),
+    subscribe=extend_schema(
+        tags=['Subscriptions'],
+        summary='訂閱方案 / Subscribe to plan',
+        description='訂閱指定的訂閱方案。\n\nSubscribe to a specific plan.'
+    ),
+    cancel=extend_schema(
+        tags=['Subscriptions'],
+        summary='取消訂閱 / Cancel subscription',
+        description='取消當前的訂閱。\n\nCancel current subscription.'
+    ),
+)
 class UserSubscriptionViewSet(viewsets.ViewSet):
     """ViewSet for user subscription management"""
     permission_classes = [IsAuthenticated]
@@ -431,6 +477,33 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
             }, status=status.HTTP_404_NOT_FOUND)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Subscriptions'],
+        summary='列出所有訂閱（管理員）/ List all subscriptions (Admin)',
+        description='管理員獲取所有用戶的訂閱列表。\n\nAdmin gets all users\' subscription list.'
+    ),
+    retrieve=extend_schema(
+        tags=['Subscriptions'],
+        summary='獲取訂閱詳情（管理員）/ Get subscription details (Admin)',
+        description='管理員獲取指定訂閱的詳細資訊。\n\nAdmin gets specific subscription details.'
+    ),
+    update=extend_schema(
+        tags=['Subscriptions'],
+        summary='更新訂閱（管理員）/ Update subscription (Admin)',
+        description='管理員更新訂閱資訊。\n\nAdmin updates subscription information.'
+    ),
+    partial_update=extend_schema(
+        tags=['Subscriptions'],
+        summary='部分更新訂閱（管理員）/ Partial update subscription (Admin)',
+        description='管理員部分更新訂閱資訊。\n\nAdmin partially updates subscription information.'
+    ),
+    destroy=extend_schema(
+        tags=['Subscriptions'],
+        summary='刪除訂閱（管理員）/ Delete subscription (Admin)',
+        description='管理員刪除訂閱。\n\nAdmin deletes subscription.'
+    ),
+)
 class AdminSubscriptionViewSet(viewsets.ModelViewSet):
     """Admin ViewSet for managing all user subscriptions"""
     queryset = UserSubscription.objects.select_related('user', 'plan').order_by('-created_at')

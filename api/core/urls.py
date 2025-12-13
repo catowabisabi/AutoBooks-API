@@ -11,10 +11,33 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from drf_spectacular.utils import extend_schema
 from users.google_oauth import GoogleOAuthURLView, GoogleOAuthCallbackView, GoogleOAuthTokenView
 from core.views.api_key_views import ApiKeyStatusView, ApiKeyManageView, ApiKeyTestView
 from core.views.rag_views import RAGQueryView, RAGChatView, RAGKnowledgeListView
 from core.views.root_view import root_view
+
+
+# Wrap JWT views with schema decorators
+class DecoratedTokenObtainPairView(TokenObtainPairView):
+    @extend_schema(
+        tags=['Authentication'],
+        summary='獲取 JWT Token / Obtain JWT Token',
+        description='使用用戶名和密碼獲取 JWT access token 和 refresh token。\n\nObtain JWT access token and refresh token using username and password.'
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+
+class DecoratedTokenRefreshView(TokenRefreshView):
+    @extend_schema(
+        tags=['Authentication'],
+        summary='刷新 JWT Token / Refresh JWT Token',
+        description='使用 refresh token 獲取新的 access token。\n\nObtain new access token using refresh token.'
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
 
 urlpatterns = [
     # Root endpoint
@@ -28,8 +51,8 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     # JWT Auth
-    path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/v1/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/v1/auth/token/', DecoratedTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/auth/token/refresh/', DecoratedTokenRefreshView.as_view(), name='token_refresh'),
     
     # Google OAuth
     path('api/v1/auth/google/', GoogleOAuthURLView.as_view(), name='google_oauth_url'),

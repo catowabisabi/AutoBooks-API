@@ -23,6 +23,10 @@ from .serializers import (
     ReportScheduleSerializer
 )
 from core.schema_serializers import AnalyticsDashboardResponseSerializer
+from .schema import (
+    DashboardViewSetSchema, ChartViewSetSchema, AnalyticsSalesViewSetSchema,
+    KPIMetricViewSetSchema, ReportScheduleViewSetSchema, AnalyticsDashboardViewSchema
+)
 
 
 # Allow anonymous access in DEBUG mode for development
@@ -32,6 +36,7 @@ def get_permission_classes():
     return [IsAuthenticated]
 
 
+@DashboardViewSetSchema
 class DashboardViewSet(viewsets.ModelViewSet):
     """ViewSet for Dashboards"""
     queryset = Dashboard.objects.prefetch_related('charts').all()
@@ -55,6 +60,7 @@ class DashboardViewSet(viewsets.ModelViewSet):
         return Response({'error': 'No default dashboard'}, status=status.HTTP_404_NOT_FOUND)
 
 
+@ChartViewSetSchema
 class ChartViewSet(viewsets.ModelViewSet):
     """ViewSet for Charts"""
     queryset = Chart.objects.select_related('dashboard').all()
@@ -71,6 +77,7 @@ class ChartViewSet(viewsets.ModelViewSet):
         return ChartSerializer
 
 
+@AnalyticsSalesViewSetSchema
 class AnalyticsSalesViewSet(viewsets.ModelViewSet):
     """ViewSet for Sales Analytics"""
     queryset = AnalyticsSales.objects.all()
@@ -119,6 +126,7 @@ class AnalyticsSalesViewSet(viewsets.ModelViewSet):
         })
 
 
+@KPIMetricViewSetSchema
 class KPIMetricViewSet(viewsets.ModelViewSet):
     """ViewSet for KPI Metrics"""
     queryset = KPIMetric.objects.all()
@@ -170,6 +178,7 @@ class KPIMetricViewSet(viewsets.ModelViewSet):
         return Response(KPIMetricSerializer(kpi).data)
 
 
+@ReportScheduleViewSetSchema
 class ReportScheduleViewSet(viewsets.ModelViewSet):
     """ViewSet for Report Schedules"""
     queryset = ReportSchedule.objects.all()
@@ -181,6 +190,7 @@ class ReportScheduleViewSet(viewsets.ModelViewSet):
 
 
 # Analytics Dashboard Overview
+@AnalyticsDashboardViewSchema
 class AnalyticsDashboardView(APIView):
     """
     Get analytics dashboard overview

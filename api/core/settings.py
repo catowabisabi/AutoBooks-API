@@ -18,6 +18,13 @@ ALLOWED_HOSTS = [h.strip() for h in DJANGO_ALLOWED_HOSTS.split(',') if h.strip()
 AUTH_USER_MODEL = 'users.User'
 
 # =================================================================
+# Authentication Control (for testing/development)
+# =================================================================
+# Set AUTH_DISABLED=true in .env to disable all authentication
+# WARNING: Never use this in production!
+AUTH_DISABLED = os.getenv('AUTH_DISABLED', 'False').lower() == 'true'
+
+# =================================================================
 # Application Definition
 # =================================================================
 INSTALLED_APPS = [
@@ -197,6 +204,10 @@ For any issues, please contact the system administrator.
         {
             'name': 'Users',
             'description': '👥 **用戶管理 / User Management**\n\n用戶帳號的 CRUD 操作、個人資料管理、用戶設定。\n\nUser account CRUD operations, profile management, user settings.'
+        },
+        {
+            'name': 'User Settings',
+            'description': '⚙️ **用戶設定 / User Settings**\n\n用戶通知偏好和帳單資訊設定。\n\nUser notification preferences and billing information settings.'
         },
         {
             'name': 'Subscriptions',

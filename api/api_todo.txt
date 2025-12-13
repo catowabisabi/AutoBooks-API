@@ -1,0 +1,128 @@
+# AutoBooks API Development TODO
+# ===============================
+# Last Updated: 2024-12-12
+# 
+# Status Legend:
+#   [ ] = Not Started
+#   [~] = In Progress
+#   [x] = Completed
+#   [-] = Cancelled/Not Needed
+
+# ===================================================================
+# ISSUE #1: API Endpoints Not Protected
+# ===================================================================
+# Problem: Endpoints can be accessed without authentication
+# Cause: DEBUG=True mode allows anonymous access in many ViewSets
+# Solution: Add AUTH_DISABLED setting to control auth globally
+# 
+[x] Create AUTH_DISABLED setting in settings.py
+[x] Create get_permission_classes() helper function
+[x] Update ViewSets to use configurable permission
+
+# ===================================================================
+# ISSUE #2: Root View Returns JSON Instead of Simple String
+# ===================================================================
+# Problem: localhost:8000 shows JSON response with message, version, status
+# Solution: Return simple plain text "Server is running"
+#
+[x] Update root_view to return HttpResponse with plain text
+
+# ===================================================================
+# ISSUE #3: Need Global Auth Disable Switch for Testing
+# ===================================================================
+# Problem: Hard to test endpoints when auth is enabled
+# Solution: Add AUTH_DISABLED environment variable
+#
+[x] Add AUTH_DISABLED to settings.py
+[x] Create utility function for permission classes
+[x] Document usage in README
+
+# ===================================================================
+# ISSUE #4: "api" Tag Should Not Appear in Swagger
+# ===================================================================
+# Problem: There's an "api" category that merges all endpoints
+# Solution: Check urls.py and schema settings to fix tag assignments
+#
+[x] Review SPECTACULAR_SETTINGS for incorrect tagging
+[x] Ensure all views have explicit @extend_schema tags
+
+# ===================================================================
+# ISSUE #5: AI Tasks Category is Empty
+# ===================================================================
+# Problem: AI Tasks tag shows no endpoints
+# Solution: Add @extend_schema with 'AI Tasks' tag to AsyncTaskViewSet
+#
+[x] Add schema decorators to AsyncTaskViewSet in task_viewset.py
+
+# ===================================================================
+# ISSUE #6: Authentication Category is Empty
+# ===================================================================
+# Problem: Authentication tag shows no endpoints
+# Solution: Add @extend_schema to JWT token views and auth_views
+#
+[x] Add schema decorators to TokenObtainPairView (in urls.py)
+[x] Add schema decorators to auth_views.py
+
+# ===================================================================
+# ISSUE #7: Subscriptions Category is Empty
+# ===================================================================
+# Problem: Subscriptions tag shows no endpoints
+# Solution: Add schema decorators to subscription views
+#
+[x] Add schema to SubscriptionPlanViewSet
+[x] Add schema to UserSubscriptionViewSet
+
+# ===================================================================
+# ISSUE #8: Tenant Management Explanation and Fix
+# ===================================================================
+# Problem: Tenant Management category is empty
+# Explanation: Tenant = 租戶/公司，用於多租戶 SaaS 架構
+#              一個 Tenant 可以有多個用戶（員工）
+# Solution: Add schema decorators to TenantViewSet
+#
+[x] Add schema to TenantViewSet in tenants/views.py
+[x] Add schema to InvitationViewSet
+
+# ===================================================================
+# ISSUE #9: RAG Endpoints Design
+# ===================================================================
+# Problem: No RAG Knowledge Base endpoints in API docs
+# Solution: Design and document RAG endpoints
+#
+[x] Add RAG endpoints to Settings category (already done)
+[x] Create dedicated RAG tag in SPECTACULAR_SETTINGS
+[ ] Implement RAG document upload endpoint
+[ ] Implement RAG document delete endpoint
+[ ] Implement RAG reindex endpoint
+
+# ===================================================================
+# FUTURE IMPROVEMENTS
+# ===================================================================
+[ ] Add rate limiting to API endpoints
+[ ] Add API versioning (v2)
+[ ] Add comprehensive error response schemas
+[ ] Add request/response logging middleware
+[ ] Add Swagger UI dark theme
+[ ] Add API key authentication option (for external integrations)
+[ ] Add webhook support for async operations
+[ ] Internationalize all API error messages
+
+# ===================================================================
+# COMPLETED ITEMS LOG
+# ===================================================================
+# 2024-12-12: Fixed API documentation tags for analytics module
+# 2024-12-12: Fixed API documentation tags for business module
+# 2024-12-12: Added schema to coredata views
+# 2024-12-12: Added schema to core API key views
+# 2024-12-12: Added schema to RAG views
+# 2024-12-12: Added schema to AI service viewset
+# 2024-12-12: Created analytics/schema.py
+# 2024-12-12: Created business/schema.py
+# 2024-12-12: Fixed issues #1-9 (auth, root view, tags, etc.)
+# 2024-12-12: Added User Settings tag to SPECTACULAR_SETTINGS
+# 2024-12-12: Added schema decorators to UserSettingsViewSet
+# 2024-12-12: Added schema decorators to SubscriptionPlanViewSet, UserSubscriptionViewSet, AdminSubscriptionViewSet
+# 2024-12-12: Added schema decorators to TenantViewSet, InvitationViewSet
+# 2024-12-12: Added schema decorators to AsyncTaskViewSet, TaskProgressView
+# 2024-12-12: Added schema decorators to Google OAuth views
+

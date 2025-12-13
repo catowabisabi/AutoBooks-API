@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as gettext
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 # Alias for translation
 _ = gettext
@@ -29,6 +30,58 @@ from .decorators import require_tenant, require_admin_access
 from core.schema_serializers import InvitationAcceptResponseSerializer
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Tenants'],
+        summary='列出用戶的組織 / List user\'s organizations',
+        description='獲取用戶所屬的所有組織列表。\n\nGet all organizations the user belongs to.'
+    ),
+    create=extend_schema(
+        tags=['Tenants'],
+        summary='創建組織 / Create organization',
+        description='創建新組織，創建者成為擁有者。\n\nCreate a new organization, creator becomes owner.'
+    ),
+    retrieve=extend_schema(
+        tags=['Tenants'],
+        summary='獲取組織詳情 / Get organization details',
+        description='獲取指定組織的詳細資訊。\n\nGet details of a specific organization.'
+    ),
+    update=extend_schema(
+        tags=['Tenants'],
+        summary='更新組織 / Update organization',
+        description='更新組織資訊（僅限管理員）。\n\nUpdate organization information (admin only).'
+    ),
+    partial_update=extend_schema(
+        tags=['Tenants'],
+        summary='部分更新組織 / Partial update organization',
+        description='部分更新組織資訊（僅限管理員）。\n\nPartially update organization information (admin only).'
+    ),
+    destroy=extend_schema(
+        tags=['Tenants'],
+        summary='刪除組織 / Delete organization',
+        description='刪除組織（僅限擁有者）。\n\nDelete organization (owner only).'
+    ),
+    members=extend_schema(
+        tags=['Tenants'],
+        summary='列出組織成員 / List organization members',
+        description='獲取組織的所有成員列表。\n\nGet all members of the organization.'
+    ),
+    invite=extend_schema(
+        tags=['Tenants'],
+        summary='邀請成員 / Invite member',
+        description='邀請用戶加入組織。\n\nInvite a user to join the organization.'
+    ),
+    remove_member=extend_schema(
+        tags=['Tenants'],
+        summary='移除成員 / Remove member',
+        description='從組織移除成員。\n\nRemove a member from the organization.'
+    ),
+    update_role=extend_schema(
+        tags=['Tenants'],
+        summary='更新成員角色 / Update member role',
+        description='更新成員在組織中的角色。\n\nUpdate member\'s role in the organization.'
+    ),
+)
 class TenantViewSet(viewsets.ModelViewSet):
     """
     ViewSet for tenant management.
@@ -203,6 +256,23 @@ class TenantViewSet(viewsets.ModelViewSet):
         })
 
 
+@extend_schema_view(
+    create=extend_schema(
+        tags=['Tenants'],
+        summary='創建邀請 / Create invitation',
+        description='創建組織邀請（僅限管理員/擁有者）。\n\nCreate organization invitation (admin/owner only).'
+    ),
+    accept=extend_schema(
+        tags=['Tenants'],
+        summary='接受邀請 / Accept invitation',
+        description='接受組織邀請並加入組織。\n\nAccept organization invitation and join.'
+    ),
+    pending=extend_schema(
+        tags=['Tenants'],
+        summary='待處理邀請 / Pending invitations',
+        description='獲取當前用戶的待處理邀請列表。\n\nGet current user\'s pending invitations.'
+    ),
+)
 class InvitationViewSet(viewsets.ViewSet):
     """
     ViewSet for handling invitations.

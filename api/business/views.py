@@ -35,6 +35,16 @@ from .serializers import (
     IPODealSizeSerializer, IPODealSizeListSerializer,
     BusinessPartnerSerializer, BusinessPartnerListSerializer
 )
+from .schema import (
+    CompanyViewSetSchema, AuditProjectViewSetSchema, TaxReturnCaseViewSetSchema,
+    BillableHourViewSetSchema, RevenueViewSetSchema, BMIIPOPRRecordViewSetSchema,
+    BusinessPartnerViewSetSchema, IPOTimelineProgressViewSetSchema,
+    IPODealFunnelViewSetSchema, IPODealSizeViewSetSchema, OverviewDashboardViewSchema,
+    ListedClientViewSetSchema, AnnouncementViewSetSchema, MediaCoverageViewSetSchema,
+    IPOMandateViewSetSchema, ServiceRevenueViewSetSchema, ActiveEngagementViewSetSchema,
+    ClientPerformanceViewSetSchema, ClientIndustryViewSetSchema, MediaSentimentRecordViewSetSchema,
+    RevenueTrendViewSetSchema, BMIDocumentViewSetSchema
+)
 
 
 # Allow anonymous access in DEBUG mode for development
@@ -44,6 +54,7 @@ def get_permission_classes():
     return [IsAuthenticated]
 
 
+@CompanyViewSetSchema
 class CompanyViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Company CRUD operations
@@ -79,6 +90,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         })
 
 
+@AuditProjectViewSetSchema
 class AuditProjectViewSet(viewsets.ModelViewSet):
     """
     ViewSet for AuditProject CRUD operations
@@ -115,6 +127,7 @@ class AuditProjectViewSet(viewsets.ModelViewSet):
         })
 
 
+@TaxReturnCaseViewSetSchema
 class TaxReturnCaseViewSet(viewsets.ModelViewSet):
     """
     ViewSet for TaxReturnCase CRUD operations
@@ -148,6 +161,7 @@ class TaxReturnCaseViewSet(viewsets.ModelViewSet):
         })
 
 
+@BillableHourViewSetSchema
 class BillableHourViewSet(viewsets.ModelViewSet):
     """
     ViewSet for BillableHour CRUD operations
@@ -198,6 +212,7 @@ class BillableHourViewSet(viewsets.ModelViewSet):
         return Response(list(result))
 
 
+@RevenueViewSetSchema
 class RevenueViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Revenue CRUD operations
@@ -256,6 +271,7 @@ class RevenueViewSet(viewsets.ModelViewSet):
         return Response(RevenueSerializer(revenue).data)
 
 
+@BMIIPOPRRecordViewSetSchema
 class BMIIPOPRRecordViewSet(viewsets.ModelViewSet):
     """
     ViewSet for BMIIPOPRRecord CRUD operations
@@ -285,6 +301,7 @@ class BMIIPOPRRecordViewSet(viewsets.ModelViewSet):
         })
 
 
+@BMIDocumentViewSetSchema
 class BMIDocumentViewSet(viewsets.ModelViewSet):
     """ViewSet for BMI Documents"""
     queryset = BMIDocument.objects.select_related('bmi_project', 'uploaded_by').all()
@@ -299,6 +316,7 @@ from django.utils import timezone
 from core.schema_serializers import DashboardOverviewResponseSerializer
 
 
+@OverviewDashboardViewSchema
 class DashboardOverviewView(APIView):
     """
     Get dashboard overview statistics
@@ -380,6 +398,7 @@ from .serializers import (
 )
 
 
+@ListedClientViewSetSchema
 class ListedClientViewSet(viewsets.ModelViewSet):
     """ViewSet for ListedClient CRUD operations"""
     queryset = ListedClient.objects.select_related('company').all()
@@ -408,6 +427,7 @@ class ListedClientViewSet(viewsets.ModelViewSet):
         })
 
 
+@AnnouncementViewSetSchema
 class AnnouncementViewSet(viewsets.ModelViewSet):
     """ViewSet for Announcement CRUD operations"""
     queryset = Announcement.objects.select_related('listed_client__company', 'handler').all()
@@ -439,6 +459,7 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         })
 
 
+@MediaCoverageViewSetSchema
 class MediaCoverageViewSet(viewsets.ModelViewSet):
     """ViewSet for MediaCoverage CRUD operations"""
     queryset = MediaCoverage.objects.select_related('listed_client__company', 'company').all()
@@ -466,6 +487,7 @@ class MediaCoverageViewSet(viewsets.ModelViewSet):
         })
 
 
+@IPOMandateViewSetSchema
 class IPOMandateViewSet(viewsets.ModelViewSet):
     """ViewSet for IPOMandate CRUD operations"""
     queryset = IPOMandate.objects.select_related('company', 'lead_partner').all()
@@ -524,6 +546,7 @@ class IPOMandateViewSet(viewsets.ModelViewSet):
         return Response(funnel)
 
 
+@ServiceRevenueViewSetSchema
 class ServiceRevenueViewSet(viewsets.ModelViewSet):
     """ViewSet for ServiceRevenue CRUD operations"""
     queryset = ServiceRevenue.objects.select_related('company').all()
@@ -552,6 +575,7 @@ class ServiceRevenueViewSet(viewsets.ModelViewSet):
         ))
 
 
+@ActiveEngagementViewSetSchema
 class ActiveEngagementViewSet(viewsets.ModelViewSet):
     """ViewSet for ActiveEngagement CRUD operations"""
     queryset = ActiveEngagement.objects.select_related('company', 'lead').all()
@@ -581,6 +605,7 @@ class ActiveEngagementViewSet(viewsets.ModelViewSet):
         })
 
 
+@ClientPerformanceViewSetSchema
 class ClientPerformanceViewSet(viewsets.ModelViewSet):
     """ViewSet for ClientPerformance CRUD operations"""
     queryset = ClientPerformance.objects.select_related('company').all()
@@ -597,6 +622,7 @@ class ClientPerformanceViewSet(viewsets.ModelViewSet):
         return ClientPerformanceSerializer
 
 
+@ClientIndustryViewSetSchema
 class ClientIndustryViewSet(viewsets.ModelViewSet):
     """ViewSet for ClientIndustry CRUD operations"""
     queryset = ClientIndustry.objects.all()
@@ -608,6 +634,7 @@ class ClientIndustryViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 
+@MediaSentimentRecordViewSetSchema
 class MediaSentimentRecordViewSet(viewsets.ModelViewSet):
     """ViewSet for MediaSentimentRecord CRUD operations"""
     queryset = MediaSentimentRecord.objects.all()
@@ -631,6 +658,7 @@ class MediaSentimentRecordViewSet(viewsets.ModelViewSet):
         return Response(MediaSentimentRecordSerializer(qs, many=True).data)
 
 
+@RevenueTrendViewSetSchema
 class RevenueTrendViewSet(viewsets.ModelViewSet):
     """ViewSet for RevenueTrend CRUD operations"""
     queryset = RevenueTrend.objects.all()
@@ -660,6 +688,7 @@ class RevenueTrendViewSet(viewsets.ModelViewSet):
 # IPO Timeline Progress ViewSet
 # =================================================================
 
+@IPOTimelineProgressViewSetSchema
 class IPOTimelineProgressViewSet(viewsets.ModelViewSet):
     """
     ViewSet for IPO Timeline Progress CRUD operations
@@ -709,6 +738,7 @@ class IPOTimelineProgressViewSet(viewsets.ModelViewSet):
 # IPO Deal Funnel ViewSet
 # =================================================================
 
+@IPODealFunnelViewSetSchema
 class IPODealFunnelViewSet(viewsets.ModelViewSet):
     """
     ViewSet for IPO Deal Funnel CRUD operations
@@ -759,6 +789,7 @@ class IPODealFunnelViewSet(viewsets.ModelViewSet):
 # IPO Deal Size ViewSet
 # =================================================================
 
+@IPODealSizeViewSetSchema
 class IPODealSizeViewSet(viewsets.ModelViewSet):
     """
     ViewSet for IPO Deal Size CRUD operations
@@ -810,6 +841,7 @@ class IPODealSizeViewSet(viewsets.ModelViewSet):
 # Business Partner ViewSet
 # =================================================================
 
+@BusinessPartnerViewSetSchema
 class BusinessPartnerViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Business Partner CRUD operations

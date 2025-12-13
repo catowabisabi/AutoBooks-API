@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from django.db.models import Count, Q
 from django.utils import timezone
 from celery.result import AsyncResult
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from ai_assistants.models_tasks import AsyncTask, TaskStatus, TaskType
 from core.schema_serializers import TaskProgressResponseSerializer, AsyncTaskResponseSerializer
@@ -42,6 +43,28 @@ class AsyncTaskSerializer:
         }
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['AI Tasks'],
+        summary='列出任務 / List tasks',
+        description='獲取用戶的異步任務列表。\n\nGet user\'s async tasks list.'
+    ),
+    retrieve=extend_schema(
+        tags=['AI Tasks'],
+        summary='獲取任務詳情 / Get task details',
+        description='獲取指定任務的詳細資訊。\n\nGet details of a specific task.'
+    ),
+    cancel=extend_schema(
+        tags=['AI Tasks'],
+        summary='取消任務 / Cancel task',
+        description='取消正在運行的任務。\n\nCancel a running task.'
+    ),
+    stats=extend_schema(
+        tags=['AI Tasks'],
+        summary='任務統計 / Task statistics',
+        description='獲取用戶的任務統計資訊。\n\nGet user\'s task statistics.'
+    ),
+)
 class AsyncTaskViewSet(viewsets.ViewSet):
     """
     ViewSet for managing async tasks.
@@ -210,6 +233,11 @@ class AsyncTaskViewSet(viewsets.ViewSet):
         )
 
 
+@extend_schema(
+    tags=['AI Tasks'],
+    summary='查看任務進度 / Check task progress',
+    description='通過 Celery 任務 ID 查看任務進度。\n\nCheck task progress by Celery task ID.'
+)
 class TaskProgressView(APIView):
     """
     Simple endpoint to check task progress by Celery task ID.

@@ -11,6 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _, activate
 from django.conf import settings
+from drf_spectacular.utils import extend_schema
 
 from .models import User
 from .serializers import UserProfileSerializer
@@ -34,6 +35,7 @@ from core.schema_serializers import (
 )
 
 
+@extend_schema(tags=['Authentication'])
 class SignUpView(APIView):
     serializer_class = SignUpRequestSerializer
     """
@@ -43,6 +45,10 @@ class SignUpView(APIView):
     """
     permission_classes = [AllowAny]
     
+    @extend_schema(
+        summary='用戶註冊 / User Sign Up',
+        description='新用戶註冊端點，創建帳戶並返回 JWT Token。\n\nNew user registration endpoint, creates account and returns JWT Token.'
+    )
     def post(self, request):
         # Set language from request
         lang = request.data.get('language', request.headers.get('Accept-Language', 'en'))
@@ -79,6 +85,7 @@ class SignUpView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Authentication'])
 class ForgotPasswordView(APIView):
     """
     POST /auth/forgot-password/
@@ -88,6 +95,10 @@ class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
     serializer_class = ForgotPasswordRequestSerializer
     
+    @extend_schema(
+        summary='忘記密碼 / Forgot Password',
+        description='發送密碼重置郵件。\n\nSend password reset email.'
+    )
     def post(self, request):
         lang = request.data.get('language', request.headers.get('Accept-Language', 'en'))
         activate(lang[:2] if lang else 'en')
@@ -116,6 +127,7 @@ class ForgotPasswordView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Authentication'])
 class ResetPasswordView(APIView):
     """
     POST /auth/reset-password/
@@ -125,6 +137,10 @@ class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
     serializer_class = ResetPasswordRequestSerializer
     
+    @extend_schema(
+        summary='重設密碼 / Reset Password',
+        description='使用重設 Token 設定新密碼。\n\nSet new password using reset token.'
+    )
     def post(self, request):
         lang = request.data.get('language', request.headers.get('Accept-Language', 'en'))
         activate(lang[:2] if lang else 'en')
@@ -145,6 +161,7 @@ class ResetPasswordView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Authentication'])
 class ChangePasswordView(APIView):
     """
     POST /auth/change-password/
@@ -154,6 +171,10 @@ class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordRequestSerializer
     
+    @extend_schema(
+        summary='更改密碼 / Change Password',
+        description='更改當前用戶的密碼。\n\nChange current user password.'
+    )
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         
@@ -171,6 +192,7 @@ class ChangePasswordView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Authentication'])
 class AccountLockStatusView(APIView):
     """
     GET /auth/lock-status/
@@ -181,6 +203,10 @@ class AccountLockStatusView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AccountLockSerializer
     
+    @extend_schema(
+        summary='檢查帳號鎖定狀態 / Check Account Lock Status',
+        description='檢查用戶帳號是否被鎖定。\n\nCheck if user account is locked.'
+    )
     def get(self, request, user_id=None):
         if user_id:
             # Admin checking another user (require admin role)
@@ -211,6 +237,7 @@ class AccountLockStatusView(APIView):
         })
 
 
+@extend_schema(tags=['Authentication'])
 class LockAccountView(APIView):
     """
     POST /auth/lock-account/
@@ -220,6 +247,10 @@ class LockAccountView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = LockAccountRequestSerializer
     
+    @extend_schema(
+        summary='鎖定帳號 / Lock Account',
+        description='管理員鎖定用戶帳號。\n\nAdmin locks user account.'
+    )
     def post(self, request):
         # Admin only
         if request.user.role != 'ADMIN':
@@ -245,6 +276,7 @@ class LockAccountView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Authentication'])
 class UnlockAccountView(APIView):
     """
     POST /auth/unlock-account/
@@ -254,6 +286,10 @@ class UnlockAccountView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UnlockAccountRequestSerializer
     
+    @extend_schema(
+        summary='解鎖帳號 / Unlock Account',
+        description='管理員解鎖用戶帳號。\n\nAdmin unlocks user account.'
+    )
     def post(self, request):
         # Admin only
         if request.user.role != 'ADMIN':
@@ -279,6 +315,7 @@ class UnlockAccountView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Authentication'])
 class LoginAttemptsView(APIView):
     """
     GET /auth/login-attempts/
@@ -289,6 +326,10 @@ class LoginAttemptsView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AccountLockSerializer
     
+    @extend_schema(
+        summary='查看登入嘗試記錄 / View Login Attempts',
+        description='查看用戶的登入嘗試歷史記錄。\n\nView user login attempt history.'
+    )
     def get(self, request, user_id=None):
         # Admin only for viewing other users
         if user_id and request.user.role != 'ADMIN':

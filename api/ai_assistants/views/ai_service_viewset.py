@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, JSONParser
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.conf import settings
 import base64
 
@@ -14,6 +15,33 @@ from core.libs.ai_service import AIService, AIProvider, get_ai_service
 from core.schema_serializers import AIChatRequestSerializer
 
 
+@extend_schema_view(
+    chat=extend_schema(
+        tags=['AI Assistants'],
+        summary='AI 對話 / AI Chat',
+        description='發送訊息給 AI 並獲取回應。\n\nSend a message to AI and get response.'
+    ),
+    chat_with_history=extend_schema(
+        tags=['AI Assistants'],
+        summary='AI 對話（含歷史）/ AI Chat with history',
+        description='發送訊息給 AI，包含對話歷史。\n\nSend a message to AI with conversation history.'
+    ),
+    analyze_image=extend_schema(
+        tags=['AI Assistants'],
+        summary='AI 圖片分析 / AI Image analysis',
+        description='使用 AI 分析圖片內容。\n\nAnalyze image content using AI.'
+    ),
+    providers=extend_schema(
+        tags=['AI Assistants'],
+        summary='列出 AI 服務商 / List AI providers',
+        description='獲取可用的 AI 服務商列表。\n\nGet available AI providers list.'
+    ),
+    models=extend_schema(
+        tags=['AI Assistants'],
+        summary='列出 AI 模型 / List AI models',
+        description='獲取指定服務商可用的模型列表。\n\nGet available models for specified provider.'
+    ),
+)
 class AIServiceViewSet(viewsets.ViewSet):
     """
     Unified AI Service API

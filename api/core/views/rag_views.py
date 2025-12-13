@@ -6,11 +6,13 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from drf_spectacular.utils import extend_schema
 from core.libs.rag_service import get_knowledge_base
 from core.libs.ai_service import AIService
 from core.schema_serializers import RAGQueryRequestSerializer, RAGChatRequestSerializer
 
 
+@extend_schema(tags=['Settings'])
 class RAGQueryView(APIView):
     """
     Query the RAG knowledge base.
@@ -19,6 +21,10 @@ class RAGQueryView(APIView):
     permission_classes = [AllowAny]  # Allow public access to help docs
     serializer_class = RAGQueryRequestSerializer
     
+    @extend_schema(
+        summary='查詢知識庫 / Query knowledge base',
+        description='查詢 RAG 知識庫並返回相關文檔。\n\nQuery RAG knowledge base and return relevant documents.'
+    )
     def post(self, request):
         query = request.data.get('query', '')
         category = request.data.get('category')
@@ -54,6 +60,7 @@ class RAGQueryView(APIView):
         return Response(response_data)
 
 
+@extend_schema(tags=['Settings'])
 class RAGChatView(APIView):
     """
     Chat with AI using RAG-enhanced responses.
@@ -62,6 +69,10 @@ class RAGChatView(APIView):
     permission_classes = [IsAuthenticated]  # Require authentication
     serializer_class = RAGChatRequestSerializer
     
+    @extend_schema(
+        summary='RAG 智能對話 / RAG chat',
+        description='使用 RAG 增強的 AI 對話，結合知識庫上下文生成回應。\n\nChat with AI using RAG-enhanced responses with knowledge base context.'
+    )
     def post(self, request):
         query = request.data.get('query', '')
         category = request.data.get('category')
@@ -122,6 +133,7 @@ class RAGChatView(APIView):
             )
 
 
+@extend_schema(tags=['Settings'])
 class RAGKnowledgeListView(APIView):
     """
     List all items in the knowledge base.
@@ -130,6 +142,10 @@ class RAGKnowledgeListView(APIView):
     permission_classes = [AllowAny]
     serializer_class = RAGQueryRequestSerializer
     
+    @extend_schema(
+        summary='列出知識庫項目 / List knowledge base items',
+        description='列出知識庫中的所有項目。\n\nList all items in the knowledge base.'
+    )
     def get(self, request):
         category = request.query_params.get('category')
         kb = get_knowledge_base()
