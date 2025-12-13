@@ -72,8 +72,7 @@ urlpatterns = [
     # Feature Modules
     path('api/v1/', include('health.urls')),
     path('api/v1/', include('coredata.urls')),
-    path('api/v1/', include('users.urls')),
-    path('api/v1/hrms/', include('hrms.urls')),
+    path('api/v1/', include('users.urls')),    path('api/v1/', include('projects.urls')),    path('api/v1/hrms/', include('hrms.urls')),
     path('api/v1/', include('documents.urls')),
     path('api/v1/analytics/', include('analytics.urls')),
 

@@ -125,4 +125,8 @@
 # 2024-12-12: Added schema decorators to TenantViewSet, InvitationViewSet
 # 2024-12-12: Added schema decorators to AsyncTaskViewSet, TaskProgressView
 # 2024-12-12: Added schema decorators to Google OAuth views
+# 2024-12-12: Added schema decorators to Projects ViewSets (ProjectViewSet, TaskBoardViewSet, TaskViewSet, TaskCommentViewSet)
+# 2024-12-12: Added projects to main URL routing
+# 2024-12-12: Created custom schema generator to prevent "api" tag generation
+# 2024-12-12: Disabled API root view in all DefaultRouter instances to fix "api" category issue
 

@@ -32,6 +32,7 @@ from .views import (
 )
 
 router = DefaultRouter()
+router.include_root_view = False  # Disable API root view to avoid "api" tag
 router.register(r'companies', CompanyViewSet, basename='company')
 router.register(r'audits', AuditProjectViewSet, basename='audit')
 router.register(r'tax-returns', TaxReturnCaseViewSet, basename='tax-return')

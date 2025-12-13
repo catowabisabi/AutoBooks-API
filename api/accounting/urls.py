@@ -9,6 +9,7 @@ from .views import (
 )
 
 router = DefaultRouter()
+router.include_root_view = False  # Disable API root view to avoid "api" tag
 router.register(r'accounting/fiscal-years', FiscalYearViewSet, basename='fiscal-year')
 router.register(r'accounting/periods', AccountingPeriodViewSet, basename='accounting-period')
 router.register(r'accounting/currencies', CurrencyViewSet, basename='currency')

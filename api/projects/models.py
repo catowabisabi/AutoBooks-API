@@ -1,8 +1,8 @@
 import uuid
 from django.db import models
 from core.models import BaseModel
-from tenants.models import Tenant
-#from hrms.models import Employee
+from core.tenants.models import Tenant
+from hrms.models import Employee
 from users.models import User
 
 

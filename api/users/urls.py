@@ -14,6 +14,7 @@ from .auth_views import (
 )
 
 router = DefaultRouter()
+router.include_root_view = False  # Disable API root view to avoid "api" tag
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'user-settings', UserSettingsViewSet, basename='user-settings')
 router.register(r'subscription-plans', SubscriptionPlanViewSet, basename='subscription-plan')

@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     # Local apps (feature-based)
     'core.apps.CoreConfig',
     'users',
+    'projects',
     'hrms',
     'documents',
     'analytics',

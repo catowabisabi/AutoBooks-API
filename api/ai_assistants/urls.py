@@ -68,6 +68,7 @@ from ai_assistants.views.task_viewset import (
 
 # Router for viewsets
 router = DefaultRouter()
+router.include_root_view = False  # Disable API root view to avoid "api" tag
 router.register(r'ai-service', AIServiceViewSet, basename='ai-service')
 
 # Email Assistant Router
