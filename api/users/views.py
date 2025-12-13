@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.utils import timezone
 from datetime import timedelta
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import User, UserSettings, SubscriptionPlan, UserSubscription
 from .serializers import (
     AdminCreateUserSerializer, UserSerializer, UserProfileSerializer, 
@@ -24,6 +25,53 @@ class IsAdminUser(BasePermission):
         )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Users'],
+        summary='列出所有用戶 / List all users',
+        description='獲取所有用戶列表，支援分頁、篩選和搜索。\n\nGet all users list with pagination, filtering and search support.'
+    ),
+    create=extend_schema(
+        tags=['Users'],
+        summary='創建用戶（管理員）/ Create user (Admin)',
+        description='管理員創建新用戶。\n\nAdmin creates a new user.'
+    ),
+    retrieve=extend_schema(
+        tags=['Users'],
+        summary='獲取用戶詳情 / Get user details',
+        description='根據用戶 ID 獲取詳細資訊。\n\nGet user details by ID.'
+    ),
+    update=extend_schema(
+        tags=['Users'],
+        summary='更新用戶 / Update user',
+        description='更新用戶完整資訊（管理員）。\n\nUpdate full user information (Admin).'
+    ),
+    partial_update=extend_schema(
+        tags=['Users'],
+        summary='部分更新用戶 / Partial update user',
+        description='部分更新用戶資訊（管理員）。\n\nPartially update user information (Admin).'
+    ),
+    destroy=extend_schema(
+        tags=['Users'],
+        summary='刪除用戶 / Delete user',
+        description='刪除用戶（管理員）。\n\nDelete user (Admin).'
+    ),
+    register=extend_schema(
+        tags=['Users'],
+        summary='用戶註冊 / User registration',
+        description='新用戶自助註冊，無需認證。\n\nNew user self-registration, no authentication required.'
+    ),
+    me=extend_schema(
+        tags=['Users'],
+        summary='獲取當前用戶 / Get current user',
+        description='獲取當前已認證用戶的資訊。\n\nGet current authenticated user information.'
+    ),
+    update_profile=extend_schema(
+        tags=['Users'],
+        summary='更新個人資料 / Update profile',
+        description='更新當前用戶的個人資料。\n\nUpdate current user profile.'
+    ),
+)
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     permission_classes = [IsAuthenticated]

@@ -27,8 +27,14 @@ from .models import (
     LeaveTypes, LeaveStatus, PayrollPeriod, Payroll, PayrollItem, PayrollStatus,
     Project, ProjectStatuses, Task, TaskStatuses, TaskPriority, UserProjectMapping
 )
+from .schema import (
+    DesignationViewSetSchema, DepartmentViewSetSchema, EmployeeViewSetSchema,
+    LeaveApplicationViewSetSchema, PayrollViewSetSchema,
+    ProjectViewSetSchema, TaskViewSetSchema
+)
 
 
+@DesignationViewSetSchema
 class DesignationViewSet(viewsets.ModelViewSet):
     """ViewSet for Designations (Job Titles)"""
     queryset = Designation.objects.all()
@@ -40,6 +46,7 @@ class DesignationViewSet(viewsets.ModelViewSet):
     ordering = ['level']
 
 
+@DepartmentViewSetSchema
 class DepartmentViewSet(viewsets.ModelViewSet):
     """ViewSet for Departments"""
     queryset = Department.objects.select_related('manager', 'parent').all()
@@ -71,6 +78,7 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         return Response([build_tree(d) for d in root_depts])
 
 
+@EmployeeViewSetSchema
 class EmployeeViewSet(viewsets.ModelViewSet):
     """ViewSet for Employees"""
     queryset = Employee.objects.select_related('user', 'department', 'designation', 'manager').all()
@@ -113,6 +121,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Response(PayrollListSerializer(payrolls, many=True).data)
 
 
+@LeaveApplicationViewSetSchema
 class LeaveApplicationViewSet(viewsets.ModelViewSet):
     """ViewSet for Leave Applications"""
     queryset = LeaveApplication.objects.select_related('employee__user', 'approved_by__user').all()
@@ -222,6 +231,7 @@ class PayrollPeriodViewSet(viewsets.ModelViewSet):
         return Response({'error': 'No current period found'}, status=status.HTTP_404_NOT_FOUND)
 
 
+@PayrollViewSetSchema
 class PayrollViewSet(viewsets.ModelViewSet):
     """ViewSet for Payroll Records"""
     queryset = Payroll.objects.select_related('employee__user', 'period').all()
@@ -273,6 +283,7 @@ class PayrollViewSet(viewsets.ModelViewSet):
         return Response(PayrollSerializer(payroll).data)
 
 
+@ProjectViewSetSchema
 class ProjectViewSet(viewsets.ModelViewSet):
     """ViewSet for Projects"""
     queryset = Project.objects.select_related('owner').all()
@@ -319,6 +330,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(ProjectSerializer(project).data)
 
 
+@TaskViewSetSchema
 class TaskViewSet(viewsets.ModelViewSet):
     """ViewSet for Tasks"""
     queryset = Task.objects.select_related('project', 'assigned_to', 'assigned_by').all()

@@ -7,6 +7,9 @@ import datetime
 
 
 @extend_schema(
+    tags=['Health'],
+    summary='健康檢查 / Health Check',
+    description='檢查系統是否正常運行。無需認證。\n\nCheck if the system is running normally. No authentication required.',
     responses=inline_serializer(
         name='HealthCheckResponse',
         fields={

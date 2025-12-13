@@ -14,8 +14,12 @@ from drf_spectacular.views import (
 from users.google_oauth import GoogleOAuthURLView, GoogleOAuthCallbackView, GoogleOAuthTokenView
 from core.views.api_key_views import ApiKeyStatusView, ApiKeyManageView, ApiKeyTestView
 from core.views.rag_views import RAGQueryView, RAGChatView, RAGKnowledgeListView
+from core.views.root_view import root_view
 
 urlpatterns = [
+    # Root endpoint
+    path('', root_view, name='root'),
+    
     path('admin/', admin.site.urls),
 
     # API Documentation

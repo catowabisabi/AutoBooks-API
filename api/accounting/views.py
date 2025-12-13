@@ -51,14 +51,23 @@ from .serializers import (
 )
 from .services import ReportGeneratorService, ReportExporterService, ReportCacheService
 from core.schema_serializers import BalanceSheetResponseSerializer
+from .schema import (
+    FiscalYearViewSetSchema, AccountingPeriodViewSetSchema, CurrencyViewSetSchema,
+    TaxRateViewSetSchema, AccountViewSetSchema, JournalEntryViewSetSchema,
+    ContactViewSetSchema, InvoiceViewSetSchema, PaymentViewSetSchema,
+    ExpenseViewSetSchema, ProjectViewSetSchema, ProjectDocumentViewSetSchema,
+    ReceiptViewSetSchema, ReportViewSetSchema, FinancialReportViewSetSchema
+)
 
 
+@FiscalYearViewSetSchema
 class FiscalYearViewSet(viewsets.ModelViewSet):
     queryset = FiscalYear.objects.all()
     serializer_class = FiscalYearSerializer
     permission_classes = [IsAuthenticated]
 
 
+@AccountingPeriodViewSetSchema
 class AccountingPeriodViewSet(viewsets.ModelViewSet):
     queryset = AccountingPeriod.objects.all()
     serializer_class = AccountingPeriodSerializer
@@ -146,6 +155,7 @@ class TenantContextMixin:
                 raise PermissionDenied('Viewer role cannot modify resources.')
 
 
+@CurrencyViewSetSchema
 class CurrencyViewSet(TenantContextMixin, viewsets.ModelViewSet):
     serializer_class = CurrencySerializer
     permission_classes = [IsAuthenticated]
@@ -162,12 +172,14 @@ class CurrencyViewSet(TenantContextMixin, viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
 
+@TaxRateViewSetSchema
 class TaxRateViewSet(viewsets.ModelViewSet):
     queryset = TaxRate.objects.filter(is_active=True)
     serializer_class = TaxRateSerializer
     permission_classes = [IsAuthenticated]
 
 
+@AccountViewSetSchema
 class AccountViewSet(TenantContextMixin, viewsets.ModelViewSet):
     queryset = Account.objects.all()
     permission_classes = [IsAuthenticated]
@@ -221,6 +233,7 @@ class AccountViewSet(TenantContextMixin, viewsets.ModelViewSet):
         return Response(tree)
 
 
+@JournalEntryViewSetSchema
 class JournalEntryViewSet(viewsets.ModelViewSet):
     queryset = JournalEntry.objects.all()
     permission_classes = [IsAuthenticated]
@@ -292,6 +305,7 @@ class JournalEntryViewSet(viewsets.ModelViewSet):
         return Response({'status': 'voided'})
 
 
+@ContactViewSetSchema
 class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all()
     permission_classes = [IsAuthenticated]
@@ -313,6 +327,7 @@ class ContactViewSet(viewsets.ModelViewSet):
         return queryset
 
 
+@InvoiceViewSetSchema
 class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.all()
     permission_classes = [IsAuthenticated]
@@ -518,6 +533,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@PaymentViewSetSchema
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
@@ -569,6 +585,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         return Response({'status': 'allocated'})
 
 
+@ExpenseViewSetSchema
 class ExpenseViewSet(viewsets.ModelViewSet):
     queryset = Expense.objects.all()
     permission_classes = [IsAuthenticated]
@@ -627,6 +644,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         return Response({'status': 'rejected'})
 
 
+@ReportViewSetSchema
 class ReportViewSet(viewsets.ViewSet):
     """Financial reports generation"""
     permission_classes = [IsAuthenticated]
@@ -779,6 +797,7 @@ class ReportViewSet(viewsets.ViewSet):
 # Project Management ViewSet
 # =================================================================
 
+@ProjectViewSetSchema
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing accounting projects.
@@ -1022,6 +1041,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         })
 
 
+@ProjectDocumentViewSetSchema
 class ProjectDocumentViewSet(viewsets.ModelViewSet):
     """ViewSet for managing project documents"""
     serializer_class = ProjectDocumentSerializer
@@ -1054,6 +1074,7 @@ class ProjectDocumentViewSet(viewsets.ModelViewSet):
 # Receipt ViewSet with Bulk Upload & Classification
 # =================================================================
 
+@ReceiptViewSetSchema
 class ReceiptViewSet(viewsets.ModelViewSet):
     """
     ViewSet for receipt management with bulk upload and classification features.
@@ -1844,6 +1865,7 @@ class ReceiptViewSet(viewsets.ModelViewSet):
 # Financial Reports ViewSet (New Reporting System)
 # =================================================================
 
+@FinancialReportViewSetSchema
 class FinancialReportViewSet(viewsets.ModelViewSet):
     """
     ViewSet for comprehensive financial report management.

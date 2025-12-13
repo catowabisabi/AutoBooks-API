@@ -8,8 +8,10 @@ from documents.serializers.document_serializer import DocumentUploadSerializer
 from documents.services.ocr_service import perform_ocr
 from documents.services.extraction_service import extract_data_from_text
 from documents.services.translation_service import translate_text
+from documents.schema import DocumentViewSetSchema
 
 
+@DocumentViewSetSchema
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentUploadSerializer

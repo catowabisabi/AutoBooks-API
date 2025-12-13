@@ -1,1 +1,5 @@
 請使用繁體中文回答
+請使用conda activate wisematic-erp
+如果需要使用對API的測試, 請在背景開啟Server, 因為當你使用cmd / powershell 去呼叫代碼, 會直接把當前的session 中的terminal 中在運行的server關閉, 做成找不到server 的error
+當需要安裝新的package, 請先列出所有的package, 因為有時可能是已經有。
+在當裝新的package時請查當時的conda env, 如果是base, 要求使用者自行創建。

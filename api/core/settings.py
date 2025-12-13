@@ -125,20 +125,156 @@ REST_FRAMEWORK = {
 # API Documentation (drf-spectacular)
 # =================================================================
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Wisematic ERP API',
-    'DESCRIPTION': '企業資源規劃系統核心服務 API 文件',
+    'TITLE': 'AutoBooks API',
+    'DESCRIPTION': '''
+# AutoBooks API 文件 / AutoBooks API Documentation
+
+## 簡介 / Introduction
+
+AutoBooks 是一個全功能的企業資源規劃系統（ERP），提供完整的後端 API 服務。
+
+AutoBooks is a full-featured Enterprise Resource Planning (ERP) system providing comprehensive backend API services.
+
+## 功能模組 / Feature Modules
+
+| 模組 Module | 說明 Description |
+|-------------|------------------|
+| 🔐 認證 Authentication | 用戶登入、JWT Token 管理 / User login, JWT Token management |
+| 👥 用戶管理 Users | 用戶帳號、設定、訂閱管理 / User accounts, settings, subscription management |
+| 💰 會計 Accounting | 會計科目、日記帳、發票、支出 / Chart of accounts, journals, invoices, expenses |
+| 🧾 收據 Receipts | 收據上傳、OCR 識別、欄位提取 / Receipt upload, OCR recognition, field extraction |
+| 📊 報表 Reports | 財務報表生成與匯出 / Financial report generation and export |
+| 📁 專案 Projects | 專案管理、文件關聯 / Project management, document linking |
+| 🤖 AI 助理 AI Assistants | AI 對話、文件分析、腦力激盪 / AI chat, document analysis, brainstorming |
+| 📄 文件管理 Documents | 文件上傳、儲存、管理 / Document upload, storage, management |
+| 👔 人力資源 HRMS | 員工、部門、職位管理 / Employee, department, designation management |
+| 📈 數據分析 Analytics | 儀表板、圖表、KPI 指標 / Dashboards, charts, KPI metrics |
+| 🏢 業務營運 Business | 客戶、合作夥伴、營收追蹤 / Clients, partners, revenue tracking |
+| 🏠 租戶管理 Tenants | 多租戶系統管理 / Multi-tenant system management |
+
+## 認證方式 / Authentication
+
+所有 API（除健康檢查外）都需要 JWT Bearer Token 認證。
+
+All APIs (except health check) require JWT Bearer Token authentication.
+
+```
+Authorization: Bearer <your_jwt_token>
+```
+
+## 聯繫方式 / Contact
+
+如有問題，請聯繫系統管理員。
+
+For any issues, please contact the system administrator.
+''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
     'SWAGGER_UI_SETTINGS': {
         'deepLinking': True,
         'persistAuthorization': True,
-        'displayOperationId': True,
+        'displayOperationId': False,
+        'docExpansion': 'list',
+        'filter': True,
+        'tagsSorter': 'alpha',
+        'operationsSorter': 'alpha',
     },
     'SECURITY': [{'Bearer': []}],
     'SWAGGER_UI_DIST': 'SIDECAR',
     'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
     'REDOC_DIST': 'SIDECAR',
+    # API 標籤分類和說明
+    'TAGS': [
+        {
+            'name': 'Health',
+            'description': '🏥 **健康檢查 / Health Check**\n\n系統健康狀態檢查端點，無需認證。\n\nSystem health status check endpoint, no authentication required.'
+        },
+        {
+            'name': 'Authentication',
+            'description': '🔐 **認證 / Authentication**\n\nJWT Token 認證相關端點，包含登入、Token 刷新、Google OAuth。\n\nJWT Token authentication endpoints, including login, token refresh, Google OAuth.'
+        },
+        {
+            'name': 'Users',
+            'description': '👥 **用戶管理 / User Management**\n\n用戶帳號的 CRUD 操作、個人資料管理、用戶設定。\n\nUser account CRUD operations, profile management, user settings.'
+        },
+        {
+            'name': 'Subscriptions',
+            'description': '💳 **訂閱管理 / Subscription Management**\n\n訂閱計劃和用戶訂閱管理。\n\nSubscription plans and user subscription management.'
+        },
+        {
+            'name': 'Accounting',
+            'description': '💰 **會計管理 / Accounting Management**\n\n會計科目、會計期間、財政年度、貨幣、稅率管理。\n\nChart of accounts, accounting periods, fiscal years, currencies, tax rates management.'
+        },
+        {
+            'name': 'Journals',
+            'description': '📒 **日記帳 / Journal Entries**\n\n會計分錄的建立、查詢、過帳操作。\n\nJournal entry creation, query, and posting operations.'
+        },
+        {
+            'name': 'Invoices',
+            'description': '🧾 **發票管理 / Invoice Management**\n\n銷售發票和採購發票的建立與管理。\n\nSales and purchase invoice creation and management.'
+        },
+        {
+            'name': 'Payments',
+            'description': '💵 **付款管理 / Payment Management**\n\n收款、付款記錄和發票沖銷。\n\nPayment receipts, payment records, and invoice allocation.'
+        },
+        {
+            'name': 'Expenses',
+            'description': '💸 **支出管理 / Expense Management**\n\n公司支出的記錄與分類管理。\n\nCompany expense recording and categorization.'
+        },
+        {
+            'name': 'Contacts',
+            'description': '📇 **聯絡人 / Contacts**\n\n客戶和供應商聯絡資訊管理。\n\nCustomer and supplier contact information management.'
+        },
+        {
+            'name': 'Receipts',
+            'description': '🧾 **收據處理 / Receipt Processing**\n\n收據上傳、OCR 自動識別、欄位提取與校正。\n\nReceipt upload, OCR auto-recognition, field extraction and correction.'
+        },
+        {
+            'name': 'Reports',
+            'description': '📊 **財務報表 / Financial Reports**\n\n資產負債表、損益表、現金流量表等財務報表生成與匯出。\n\nBalance sheet, income statement, cash flow statement generation and export.'
+        },
+        {
+            'name': 'Projects',
+            'description': '📁 **專案管理 / Project Management**\n\n專案的建立、追蹤、文件關聯管理。\n\nProject creation, tracking, and document linking.'
+        },
+        {
+            'name': 'AI Assistants',
+            'description': '🤖 **AI 助理 / AI Assistants**\n\n智能對話、文件分析、腦力激盪會議等 AI 功能。\n\nIntelligent chat, document analysis, brainstorming sessions and other AI features.'
+        },
+        {
+            'name': 'AI Tasks',
+            'description': '⚙️ **AI 任務 / AI Tasks**\n\n非同步 AI 任務的管理與狀態追蹤。\n\nAsynchronous AI task management and status tracking.'
+        },
+        {
+            'name': 'Documents',
+            'description': '📄 **文件管理 / Document Management**\n\n文件的上傳、下載、分類與權限管理。\n\nDocument upload, download, categorization, and permission management.'
+        },
+        {
+            'name': 'HRMS',
+            'description': '👔 **人力資源 / Human Resources**\n\n員工資料、部門結構、職位管理。\n\nEmployee data, department structure, designation management.'
+        },
+        {
+            'name': 'Analytics',
+            'description': '📈 **數據分析 / Analytics**\n\n儀表板、圖表、KPI 指標與報表排程。\n\nDashboards, charts, KPI metrics, and report scheduling.'
+        },
+        {
+            'name': 'Business',
+            'description': '🏢 **業務營運 / Business Operations**\n\n客戶管理、合作夥伴、營收追蹤、市場分析。\n\nClient management, partners, revenue tracking, market analysis.'
+        },
+        {
+            'name': 'Tenants',
+            'description': '🏠 **租戶管理 / Tenant Management**\n\n多租戶系統的租戶建立與管理。\n\nMulti-tenant system tenant creation and management.'
+        },
+        {
+            'name': 'Core Data',
+            'description': '💾 **核心資料 / Core Data**\n\n系統基礎資料，如行業分類、地區代碼等。\n\nSystem base data such as industry classifications, region codes, etc.'
+        },
+        {
+            'name': 'Settings',
+            'description': '⚙️ **系統設定 / System Settings**\n\nAPI 金鑰、RAG 知識庫等系統配置。\n\nAPI keys, RAG knowledge base, and other system configurations.'
+        },
+    ],
 }
 
 SIMPLE_JWT = {
