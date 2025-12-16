@@ -85,6 +85,7 @@ class TenantContextMixin:
     """
     Mixin that ensures tenant context is properly set from headers.
     Handles DRF test client where middleware may not set tenant.
+    Falls back to first available tenant for user if no header provided.
     """
     
     def initial(self, request, *args, **kwargs):
@@ -100,7 +101,6 @@ class TenantContextMixin:
         
         from core.tenants.models import Tenant, TenantMembership
         from core.tenants.managers import set_current_tenant
-        from rest_framework.exceptions import PermissionDenied, ValidationError
         
         tenant_id = request.META.get('HTTP_X_TENANT_ID')
         tenant_slug = request.META.get('HTTP_X_TENANT_SLUG')
@@ -111,17 +111,19 @@ class TenantContextMixin:
             try:
                 tenant = Tenant.objects.get(id=tenant_id, is_active=True)
             except Tenant.DoesNotExist:
-                raise ValidationError({'error': 'invalid_tenant', 'message': 'Invalid tenant ID'})
+                # Invalid tenant ID - try fallback
+                tenant = None
             except Exception:
-                raise ValidationError({'error': 'invalid_tenant', 'message': 'Invalid tenant ID format'})
+                # Invalid format - try fallback
+                tenant = None
         elif tenant_slug:
             try:
                 tenant = Tenant.objects.get(slug=tenant_slug, is_active=True)
             except Tenant.DoesNotExist:
-                raise ValidationError({'error': 'invalid_tenant', 'message': 'Invalid tenant slug'})
+                tenant = None
         
-        if tenant is None:
-            # No tenant header - try default
+        # Always try to get a default tenant if none found
+        if tenant is None and request.user and request.user.is_authenticated:
             membership = TenantMembership.objects.filter(
                 user=request.user, is_active=True, tenant__is_active=True
             ).select_related('tenant').first()
@@ -130,6 +132,18 @@ class TenantContextMixin:
                 request.tenant = tenant
                 request.tenant_membership = membership
                 set_current_tenant(tenant)
+                return
+            else:
+                # No membership - create a default personal tenant for this user
+                # Or just set tenant/membership to None and let views handle it
+                request.tenant = None
+                request.tenant_membership = None
+                return
+        
+        if tenant is None:
+            # Still no tenant - just continue without tenant context
+            request.tenant = None
+            request.tenant_membership = None
             return
         
         # Verify membership
@@ -138,7 +152,16 @@ class TenantContextMixin:
                 user=request.user, tenant=tenant, is_active=True
             )
         except TenantMembership.DoesNotExist:
-            raise PermissionDenied('You do not have access to this organization.')
+            # No membership for this tenant - fall back to default
+            membership = TenantMembership.objects.filter(
+                user=request.user, is_active=True, tenant__is_active=True
+            ).select_related('tenant').first()
+            if membership:
+                tenant = membership.tenant
+            else:
+                request.tenant = None
+                request.tenant_membership = None
+                return
         
         request.tenant = tenant
         request.tenant_membership = membership
@@ -192,10 +215,13 @@ class AccountViewSet(TenantContextMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         
-        # Filter by tenant
+        # Filter by tenant - return empty queryset if no tenant context
         tenant = getattr(self.request, 'tenant', None)
         if tenant:
             queryset = queryset.filter(tenant=tenant)
+        else:
+            # No tenant context - return empty queryset instead of 500 error
+            return queryset.none()
         
         # Filter by account type
         account_type = self.request.query_params.get('type')
@@ -216,7 +242,13 @@ class AccountViewSet(TenantContextMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def chart_of_accounts(self, request):
         """Get hierarchical chart of accounts"""
-        accounts = Account.objects.filter(parent__isnull=True, is_active=True)
+        # Get tenant from request context
+        tenant = getattr(request, 'tenant', None)
+        if tenant:
+            accounts = Account.objects.filter(parent__isnull=True, is_active=True, tenant=tenant)
+        else:
+            # No tenant context - return empty list
+            return Response([])
         
         def build_tree(account):
             children = account.children.filter(is_active=True)

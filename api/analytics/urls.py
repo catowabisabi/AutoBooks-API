@@ -11,6 +11,7 @@ from .views import (
     KPIMetricViewSet,
     ReportScheduleViewSet,
     AnalyticsDashboardView,
+    FinanceAnalyticsView,
 )
 
 router = DefaultRouter()
@@ -24,5 +25,6 @@ router.register(r'report-schedules', ReportScheduleViewSet, basename='report-sch
 urlpatterns = [
     path('', include(router.urls)),
     path('overview/', AnalyticsDashboardView.as_view(), name='analytics-overview'),
+    path('finance/', FinanceAnalyticsView.as_view(), name='finance-analytics'),
 ]
 
