@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -16,6 +17,9 @@ from users.google_oauth import GoogleOAuthURLView, GoogleOAuthCallbackView, Goog
 from core.views.api_key_views import ApiKeyStatusView, ApiKeyManageView, ApiKeyTestView
 from core.views.rag_views import RAGQueryView, RAGChatView, RAGKnowledgeListView
 from core.views.root_view import root_view
+from core.views.notification_views import (
+    NotificationViewSet, NotificationPreferenceView, SendNotificationView
+)
 
 
 # Wrap JWT views with schema decorators
@@ -37,6 +41,12 @@ class DecoratedTokenRefreshView(TokenRefreshView):
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
+
+
+# Create router for notifications
+notification_router = DefaultRouter()
+notification_router.include_root_view = False
+notification_router.register(r'notifications', NotificationViewSet, basename='notification')
 
 
 urlpatterns = [
@@ -68,6 +78,11 @@ urlpatterns = [
     path('api/v1/rag/query/', RAGQueryView.as_view(), name='rag_query'),
     path('api/v1/rag/chat/', RAGChatView.as_view(), name='rag_chat'),
     path('api/v1/rag/knowledge/', RAGKnowledgeListView.as_view(), name='rag_knowledge'),
+
+    # Notifications
+    path('api/v1/', include(notification_router.urls)),
+    path('api/v1/notifications/preferences/', NotificationPreferenceView.as_view(), name='notification-preferences'),
+    path('api/v1/notifications/send/', SendNotificationView.as_view(), name='send-notification'),
 
     # Feature Modules
     path('api/v1/', include('health.urls')),

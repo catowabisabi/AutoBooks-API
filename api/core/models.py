@@ -18,6 +18,9 @@ from core.tenants.models import Tenant, TenantMembership, TenantInvitation, Tena
 from core.tenants.base import TenantAwareModel
 from core.tenants.managers import TenantAwareManager, get_current_tenant, set_current_tenant
 
+# Import notification models
+from core.models_notifications import Notification, NotificationPreference, NotificationLog
+
 __all__ = [
     'BaseModel',
     'Tenant',
@@ -28,4 +31,8 @@ __all__ = [
     'TenantAwareManager',
     'get_current_tenant',
     'set_current_tenant',
+    # Notification models
+    'Notification',
+    'NotificationPreference',
+    'NotificationLog',
 ]

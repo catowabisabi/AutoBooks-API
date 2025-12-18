@@ -47,7 +47,13 @@ class GoogleOAuthView(APIView):
     def _handle_id_token(self, credential):
         """Verify Google ID token and authenticate user"""
         try:
-            google_client_id = os.environ.get('GOOGLE_CLIENT_ID', settings.GOOGLE_CLIENT_ID)
+            google_client_id = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '') or os.environ.get('GOOGLE_CLIENT_ID', '') or getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
+            
+            if not google_client_id:
+                return Response(
+                    {'error': 'Google OAuth is not configured on the server'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
             
             # Verify the ID token
             idinfo = id_token.verify_oauth2_token(
@@ -68,19 +74,15 @@ class GoogleOAuthView(APIView):
             user, created = User.objects.get_or_create(
                 email=email,
                 defaults={
-                    'username': email.split('@')[0],
-                    'first_name': idinfo.get('given_name', ''),
-                    'last_name': idinfo.get('family_name', ''),
+                    'full_name': f"{idinfo.get('given_name', '')} {idinfo.get('family_name', '')}".strip() or email.split('@')[0],
                     'is_active': True,
                 }
             )
             
             # Update user info if exists
             if not created:
-                if not user.first_name and idinfo.get('given_name'):
-                    user.first_name = idinfo.get('given_name')
-                if not user.last_name and idinfo.get('family_name'):
-                    user.last_name = idinfo.get('family_name')
+                if not user.full_name and (idinfo.get('given_name') or idinfo.get('family_name')):
+                    user.full_name = f"{idinfo.get('given_name', '')} {idinfo.get('family_name', '')}".strip()
                 user.save()
             
             # Generate JWT tokens
@@ -92,9 +94,7 @@ class GoogleOAuthView(APIView):
                 'user': {
                     'id': user.id,
                     'email': user.email,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                    'full_name': user.get_full_name(),
+                    'full_name': user.full_name,
                 }
             })
             
@@ -107,15 +107,21 @@ class GoogleOAuthView(APIView):
     def _handle_auth_code(self, code, request):
         """Exchange authorization code for tokens and authenticate user"""
         try:
-            google_client_id = os.environ.get('GOOGLE_CLIENT_ID', settings.GOOGLE_CLIENT_ID)
-            google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', settings.GOOGLE_CLIENT_SECRET)
+            google_client_id = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '') or os.environ.get('GOOGLE_CLIENT_ID', '') or getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
+            google_client_secret = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', '') or os.environ.get('GOOGLE_CLIENT_SECRET', '') or getattr(settings, 'GOOGLE_OAUTH_CLIENT_SECRET', '')
+            
+            if not google_client_id or not google_client_secret:
+                return Response(
+                    {'error': 'Google OAuth is not configured on the server'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
             
             # Get redirect URI from request origin
             origin = request.headers.get('Origin', request.headers.get('Referer', ''))
             if origin:
                 redirect_uri = f"{origin.rstrip('/')}/auth/google/callback"
             else:
-                redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:3000/auth/google/callback')
+                redirect_uri = os.environ.get('GOOGLE_OAUTH_REDIRECT_URI', '') or os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:3000/auth/google/callback')
             
             # Exchange code for tokens
             token_response = requests.post(
@@ -163,19 +169,15 @@ class GoogleOAuthView(APIView):
             user, created = User.objects.get_or_create(
                 email=email,
                 defaults={
-                    'username': email.split('@')[0],
-                    'first_name': userinfo.get('given_name', ''),
-                    'last_name': userinfo.get('family_name', ''),
+                    'full_name': f"{userinfo.get('given_name', '')} {userinfo.get('family_name', '')}".strip() or email.split('@')[0],
                     'is_active': True,
                 }
             )
             
             # Update user info if exists
             if not created:
-                if not user.first_name and userinfo.get('given_name'):
-                    user.first_name = userinfo.get('given_name')
-                if not user.last_name and userinfo.get('family_name'):
-                    user.last_name = userinfo.get('family_name')
+                if not user.full_name and (userinfo.get('given_name') or userinfo.get('family_name')):
+                    user.full_name = f"{userinfo.get('given_name', '')} {userinfo.get('family_name', '')}".strip()
                 user.save()
             
             # Generate JWT tokens
@@ -187,9 +189,7 @@ class GoogleOAuthView(APIView):
                 'user': {
                     'id': user.id,
                     'email': user.email,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                    'full_name': user.get_full_name(),
+                    'full_name': user.full_name,
                 }
             })
             
@@ -204,12 +204,35 @@ class GoogleOAuthCallbackView(APIView):
     """
     Handle Google OAuth2 callback (for redirect-based flow).
     This is called when Google redirects back with the authorization code.
+    Supports both GET (browser redirect) and POST (AJAX) methods.
     """
     permission_classes = [AllowAny]
     
     def get(self, request):
         code = request.query_params.get('code')
         error = request.query_params.get('error')
+        
+        if error:
+            return Response(
+                {'error': error},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not code:
+            return Response(
+                {'error': 'Authorization code not provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Process the code using the main OAuth view
+        oauth_view = GoogleOAuthView()
+        oauth_view.request = request
+        return oauth_view._handle_auth_code(code, request)
+    
+    def post(self, request):
+        """Handle POST request from frontend AJAX call"""
+        code = request.data.get('code')
+        error = request.data.get('error')
         
         if error:
             return Response(
