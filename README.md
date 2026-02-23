@@ -1,355 +1,404 @@
 # Wisematic ERP Core
 
-企業資源規劃系統核心服務 - 基於 Django 的 RESTful API 後端服務
+**企業資源規劃系統核心服務 - 基於 Django 的 RESTful API 後端服務**
+*Enterprise Resource Planning Core Service - Django-based RESTful API Backend*
 
-## 專案概述
+---
+
+## 專案概述 / Project Overview
 
 Wisematic ERP Core 是一個全功能的企業資源規劃系統，提供以下核心模組：
+*Wisematic ERP Core is a full-featured Enterprise Resource Planning system with the following core modules:*
 
-- 👥 **使用者管理** (Users)
-- 🏢 **人力資源管理系統** (HRMS)
-- 📊 **專案管理** (Projects)
-- 📄 **文件管理** (Documents)
-- 📈 **數據分析** (Analytics)
-- 🤖 **AI 助理** (AI Assistants)
-- 💾 **核心資料管理** (Core Data)
+| 模組 Module | 說明 Description |
+|---|---|
+| 👥 使用者管理 | User Management |
+| 🏢 人力資源管理系統 | Human Resource Management System (HRMS) |
+| 📊 專案管理 | Project Management |
+| 📄 文件管理 | Document Management |
+| 📈 數據分析 | Analytics |
+| 🤖 AI 助理 | AI Assistants |
+| 💾 核心資料管理 | Core Data Management |
 
-## 技術棧
+---
 
-- **後端框架**: Django + Django REST Framework
-- **程式語言**: Python 3.10+
-- **容器化**: Docker
-- **編排工具**: Kubernetes (K8s)
-- **部署工具**: Skaffold
-- **雲端服務**: AWS (ECR, ALB, ACM)
-- **資料庫**: PostgreSQL/MySQL (請查看 settings.py)
+## 技術棧 / Tech Stack
 
-## 系統需求
+| 項目 | 說明 |
+|---|---|
+| 後端框架 Backend Framework | Django + Django REST Framework |
+| 程式語言 Language | Python 3.10+ |
+| 容器化 Containerization | Docker |
+| 編排工具 Orchestration | Kubernetes (K8s) |
+| 部署工具 Deployment | Skaffold |
+| 雲端服務 Cloud | AWS (ECR, ALB, ACM) |
+| 資料庫 Database | PostgreSQL / MySQL |
 
-- Python 3.10 或以上
-- Conda 或 virtualenv
-- Docker (用於容器化部署)
-- Kubernetes 環境 (用於生產部署)
-- AWS CLI (用於雲端部署)
+---
 
-## 本機開發環境設定
+## 系統需求 / System Requirements
 
-### 1. 使用 Conda 建立虛擬環境
+- Python 3.10 或以上 / Python 3.10 or above
+- Conda 或 virtualenv / Conda or virtualenv
+- Docker（用於容器化部署 / for containerized deployment）
+- Kubernetes（用於生產部署 / for production deployment）
+- AWS CLI（用於雲端部署 / for cloud deployment）
+
+---
+
+## 本機開發環境設定 / Local Development Setup
+
+### 1. 建立虛擬環境 / Create Virtual Environment
 
 ```bash
-# 建立新環境
+# 建立新環境 / Create new environment
 conda create -n wisematic-erp python=3.10 -y
 
-# 啟動環境
+# 啟動環境 / Activate environment
 conda activate wisematic-erp
 ```
 
-### 2. 安裝依賴套件
+### 2. 安裝依賴套件 / Install Dependencies
 
 ```bash
-# 安裝 Python 套件
 pip install -r requirements.txt
 ```
 
-### 3. 環境變數設定
-
-複製環境變數範例檔案並進行配置：
+### 3. 環境變數設定 / Environment Variables
 
 ```bash
-# 如果有 .env.example
+# 複製範例檔案 / Copy example file
 copy .env.example .env
 ```
 
-需要設定的環境變數（請根據實際情況調整）：
-- `DATABASE_URL` - 資料庫連線字串
-- `SECRET_KEY` - Django 密鑰
-- `DEBUG` - 開發模式開關
-- `ALLOWED_HOSTS` - 允許的主機名稱
-- `AWS_ACCESS_KEY_ID` - AWS 存取金鑰
-- `AWS_SECRET_ACCESS_KEY` - AWS 秘密金鑰
-- Google Cloud 憑證路徑（如需要）
+需要設定的環境變數 / Required environment variables:
 
-### 4. 資料庫設定與遷移
+| 變數 Variable | 說明 Description |
+|---|---|
+| `DATABASE_URL` | 資料庫連線字串 / Database connection string |
+| `SECRET_KEY` | Django 密鑰 / Django secret key |
+| `DEBUG` | 開發模式開關 / Debug mode toggle |
+| `ALLOWED_HOSTS` | 允許的主機名稱 / Allowed hostnames |
+| `AWS_ACCESS_KEY_ID` | AWS 存取金鑰 / AWS access key |
+| `AWS_SECRET_ACCESS_KEY` | AWS 秘密金鑰 / AWS secret key |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Google Cloud 憑證路徑 / GCP credentials path |
+
+### 4. 資料庫設定與遷移 / Database Setup & Migration
 
 ```bash
-# 進入 api 目錄
+# 進入 api 目錄 / Enter api directory
 cd api
 
-# 建立資料庫遷移檔
+# 建立資料庫遷移檔 / Create migration files
 python manage.py makemigrations
 
-# 執行資料庫遷移
+# 執行資料庫遷移 / Run migrations
 python manage.py migrate
 
-# 建立超級使用者（管理員帳號）
+# 建立超級使用者 / Create superuser
 python manage.py createsuperuser
 ```
 
-### 5. 啟動開發伺服器
+### 5. 啟動開發伺服器 / Start Development Server
 
 ```bash
-# 啟動 Django 開發伺服器
+# 啟動 Django 開發伺服器 / Start Django development server
 python manage.py runserver
 
-# 或指定 IP 和 Port
+# 或指定 IP 和 Port / Or specify IP and port
 python manage.py runserver 0.0.0.0:8000
 ```
 
-伺服器啟動後，訪問：
-- API 根路徑: http://localhost:8000/api/v1/
-- 健康檢查: http://localhost:8000/api/v1/health/
-- Django Admin: http://localhost:8000/admin/
+伺服器啟動後，訪問 / After starting, visit:
 
-## Docker 容器化部署
+| 端點 Endpoint | URL |
+|---|---|
+| API 根路徑 / API Root | http://localhost:8000/api/v1/ |
+| 健康檢查 / Health Check | http://localhost:8000/api/v1/health/ |
+| Django Admin | http://localhost:8000/admin/ |
 
-### 建置 Docker 映像
+---
+
+## Docker 容器化部署 / Docker Deployment
+
+### 建置與執行 / Build & Run
 
 ```bash
-# 建置映像
+# 建置映像 / Build image
 docker build -t wisematic-erp-core .
 
-# 執行容器
+# 執行容器 / Run container
 docker run -p 8000:8000 wisematic-erp-core
 ```
 
-### 使用 Docker Compose（如適用）
+### Docker Compose
 
 ```bash
 docker-compose up -d
 ```
 
-## Kubernetes 部署
+---
 
-### 使用 Skaffold 部署
+## Kubernetes 部署 / Kubernetes Deployment
+
+### 使用 Skaffold / Using Skaffold
 
 ```bash
-# 開發模式（自動重新載入）
+# 開發模式（自動重新載入）/ Development mode (auto-reload)
 skaffold dev
 
-# 部署到 Kubernetes
+# 部署到 Kubernetes / Deploy to Kubernetes
 skaffold run
 
-# 刪除部署
+# 刪除部署 / Remove deployment
 skaffold delete
 ```
 
-### 手動 kubectl 部署
+### 手動部署 / Manual kubectl Deployment
 
 ```bash
-# 設定 namespace
+# 建立 namespace / Create namespace
 kubectl create namespace wisematic
 
-# 部署應用
+# 部署應用 / Deploy application
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/ingress.yaml
 
-# 查看部署狀態
+# 查看部署狀態 / Check deployment status
 kubectl get pods -n wisematic
 kubectl get svc -n wisematic
 kubectl get ingress -n wisematic
 ```
 
-## 專案結構
+---
+
+## 專案結構 / Project Structure
 
 ```
 wisematic-erp-core/
-├── api/                          # Django 應用程式碼
-│   ├── core/                     # 核心設定
-│   ├── users/                    # 使用者管理
-│   ├── hrms/                     # 人力資源管理
-│   ├── projects/                 # 專案管理
-│   ├── documents/                # 文件管理
-│   ├── analytics/                # 數據分析
-│   ├── ai_assistants/            # AI 助理
-│   ├── coredata/                 # 核心資料
-│   ├── health/                   # 健康檢查
-│   └── manage.py                 # Django 管理指令
-├── k8s/                          # Kubernetes 配置
-│   ├── deployment.yaml           # 部署配置
-│   ├── service.yaml              # 服務配置
-│   └── ingress.yaml              # Ingress 配置
-├── Dockerfile                    # Docker 建置檔
-├── requirements.txt              # Python 依賴套件
-├── skaffold.yaml                 # Skaffold 配置
-├── makefile                      # Make 自動化腳本
-└── .gitignore                    # Git 忽略清單
+├── api/                          # Django 應用程式碼 / Django application code
+│   ├── core/                     # 核心設定 / Core settings
+│   ├── users/                    # 使用者管理 / User management
+│   ├── hrms/                     # 人力資源管理 / HRMS
+│   ├── projects/                 # 專案管理 / Project management
+│   ├── documents/                # 文件管理 / Document management
+│   ├── analytics/                # 數據分析 / Analytics
+│   ├── ai_assistants/            # AI 助理 / AI Assistants
+│   ├── coredata/                 # 核心資料 / Core data
+│   ├── health/                   # 健康檢查 / Health check
+│   └── manage.py                 # Django 管理指令 / Django management
+├── k8s/                          # Kubernetes 配置 / Kubernetes configs
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── ingress.yaml
+├── Dockerfile
+├── requirements.txt
+├── skaffold.yaml
+├── makefile
+└── .gitignore
 ```
 
-## 常用指令
+---
 
-### Django 管理指令
+## 常用指令 / Common Commands
+
+### Django 管理指令 / Django Management Commands
 
 ```bash
-# 建立新應用
+# 建立新應用 / Create new app
 python manage.py startapp <app_name>
 
-# 收集靜態檔案
+# 收集靜態檔案 / Collect static files
 python manage.py collectstatic
 
-# 建立資料庫備份
+# 備份資料庫 / Backup database
 python manage.py dumpdata > backup.json
 
-# 載入資料
+# 載入資料 / Load data
 python manage.py loaddata backup.json
 
-# 執行測試
+# 執行測試 / Run tests
 python manage.py test
 
-# 開啟 Django Shell
+# 開啟 Django Shell / Open Django shell
 python manage.py shell
 ```
 
-### Make 指令（查看 makefile）
+### Make 指令 / Make Commands
 
 ```bash
-# 查看可用指令
-make help
-
-# 執行建置
-make build
-
-# 執行測試
-make test
+make help    # 查看可用指令 / Show available commands
+make build   # 執行建置 / Run build
+make test    # 執行測試 / Run tests
 ```
 
-## API 文件
+---
 
-### 健康檢查端點
+## API 文件 / API Documentation
 
-- `GET /api/v1/health/` - 系統健康狀態檢查
+### 健康檢查 / Health Check
 
-### 主要 API 端點（待確認）
+```
+GET /api/v1/health/
+```
 
-- `/api/v1/users/` - 使用者管理
-- `/api/v1/hrms/` - 人力資源管理
-- `/api/v1/projects/` - 專案管理
-- `/api/v1/documents/` - 文件管理
-- `/api/v1/analytics/` - 數據分析
-- `/api/v1/ai-assistants/` - AI 助理
+### 主要端點 / Main Endpoints
 
-## 生產環境部署
+| 端點 Endpoint | 說明 Description |
+|---|---|
+| `/api/v1/users/` | 使用者管理 / User management |
+| `/api/v1/hrms/` | 人力資源管理 / HRMS |
+| `/api/v1/projects/` | 專案管理 / Project management |
+| `/api/v1/documents/` | 文件管理 / Document management |
+| `/api/v1/analytics/` | 數據分析 / Analytics |
+| `/api/v1/ai-assistants/` | AI 助理 / AI Assistants |
 
-### AWS ECR 推送映像
+---
+
+## 生產環境部署 / Production Deployment
+
+### AWS ECR 推送映像 / Push Image to AWS ECR
 
 ```bash
-# 登入 AWS ECR
+# 登入 AWS ECR / Login to AWS ECR
 aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 935364008466.dkr.ecr.us-east-2.amazonaws.com
 
-# 標記映像
+# 標記映像 / Tag image
 docker tag wisematic-erp-core:latest 935364008466.dkr.ecr.us-east-2.amazonaws.com/wisematic/erp-core:latest
 
-# 推送映像
+# 推送映像 / Push image
 docker push 935364008466.dkr.ecr.us-east-2.amazonaws.com/wisematic/erp-core:latest
 ```
 
-### 生產環境 URL
+### 生產環境 URL / Production URLs
 
-- **主域名**: https://erp-core.wisematic.click
-- **健康檢查**: https://erp-core.wisematic.click/api/v1/health/
+| 說明 Description | URL |
+|---|---|
+| 主域名 / Main Domain | https://erp-core.wisematic.click |
+| 健康檢查 / Health Check | https://erp-core.wisematic.click/api/v1/health/ |
 
-## 疑難排解
+---
 
-### 常見問題
+## 疑難排解 / Troubleshooting
 
-**1. 資料庫連線失敗**
-- 檢查資料庫是否正在運行
-- 確認環境變數中的資料庫連線字串正確
-- 查看 `api/core/settings.py` 中的 DATABASES 設定
+### 常見問題 / Common Issues
 
-**2. 缺少環境變數**
-- 確保 `.env` 檔案存在且配置正確
-- 檢查是否所有必要的環境變數都已設定
+**1. 資料庫連線失敗 / Database Connection Failed**
+- 確認資料庫是否正在運行 / Check if database is running
+- 確認環境變數中的資料庫連線字串正確 / Verify `DATABASE_URL` is correct
+- 查看 `api/core/settings.py` 中的 `DATABASES` 設定 / Review `DATABASES` in settings
 
-**3. 依賴套件安裝失敗**
+**2. 缺少環境變數 / Missing Environment Variables**
+- 確保 `.env` 檔案存在且配置正確 / Ensure `.env` file exists and is configured
+- 檢查所有必要的環境變數是否已設定 / Check all required variables are set
+
+**3. 依賴套件安裝失敗 / Dependency Installation Failed**
 - 更新 pip: `pip install --upgrade pip`
-- 使用 conda 安裝特定套件: `conda install <package_name>`
+- 使用 conda 安裝: `conda install <package_name>`
 
-**4. Google Cloud 憑證錯誤**
-- 確保 `angular-pipe-470016-q2-d299a52c8630.json` 檔案路徑正確
+**4. Google Cloud 憑證錯誤 / Google Cloud Credentials Error**
+- 確保 `.json` 憑證檔案路徑正確 / Ensure credentials JSON path is correct
 - 設定環境變數: `GOOGLE_APPLICATION_CREDENTIALS`
 
-### 查看日誌
+### 查看日誌 / View Logs
 
 ```bash
-# Django 開發伺服器日誌
+# Django 開發伺服器日誌 / Django development server logs
 python manage.py runserver --verbosity 2
 
-# Kubernetes Pod 日誌
+# Kubernetes Pod 日誌 / Kubernetes Pod logs
 kubectl logs -f <pod-name> -n wisematic
 
-# Docker 容器日誌
+# Docker 容器日誌 / Docker container logs
 docker logs -f <container-id>
 ```
 
-## 開發指南
+---
 
-### 程式碼風格
+## 開發指南 / Development Guide
 
-- 遵循 PEP 8 規範
-- 使用有意義的變數和函數命名
-- 編寫文件字串和註解
+### 程式碼風格 / Code Style
 
-### Git 工作流程
+- 遵循 PEP 8 規範 / Follow PEP 8 guidelines
+- 使用有意義的變數和函數命名 / Use meaningful variable and function names
+- 編寫文件字串和註解 / Write docstrings and comments
+
+### Git 工作流程 / Git Workflow
 
 ```bash
-# 建立新分支
+# 建立新分支 / Create new branch
 git checkout -b feature/new-feature
 
-# 提交變更
+# 提交變更 / Commit changes
 git add .
-git commit -m "描述變更內容"
+git commit -m "feat: describe your change"
 
-# 推送到遠端
+# 推送到遠端 / Push to remote
 git push origin feature/new-feature
 ```
 
-### 測試
+### 測試 / Testing
 
 ```bash
-# 執行所有測試
+# 執行所有測試 / Run all tests
 python manage.py test
 
-# 執行特定應用測試
+# 執行特定應用測試 / Run specific app tests
 python manage.py test users
 
-# 執行測試並生成覆蓋率報告
+# 生成覆蓋率報告 / Generate coverage report
 coverage run --source='.' manage.py test
 coverage report
 ```
 
-## 安全注意事項
+---
 
-- ⚠️ 不要將 `.env` 檔案提交到版本控制
-- ⚠️ 不要在程式碼中硬編碼密鑰和憑證
-- ⚠️ 定期更新依賴套件以修補安全漏洞
-- ⚠️ 生產環境必須關閉 DEBUG 模式
-- ⚠️ 使用強密碼和金鑰
+## 安全注意事項 / Security Notes
 
-## 貢獻指南
-
-1. Fork 此專案
-2. 建立功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交變更 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 開啟 Pull Request
-
-## 授權
-
-[請根據實際情況填寫授權資訊]
-
-## 聯絡方式
-
-- 專案維護者: [填寫聯絡資訊]
-- 問題回報: [填寫 Issue tracker 連結]
-- 電子郵件: [填寫電子郵件]
-
-## 更新日誌
-
-### [版本號] - YYYY-MM-DD
-- 新增功能
-- 修復 Bug
-- 改進項目
+> ⚠️ 不要將 `.env` 檔案提交到版本控制 / Never commit `.env` to version control
+>
+> ⚠️ 不要在程式碼中硬編碼密鑰和憑證 / Never hardcode secrets or credentials in code
+>
+> ⚠️ 定期更新依賴套件以修補安全漏洞 / Regularly update dependencies to patch vulnerabilities
+>
+> ⚠️ 生產環境必須關閉 DEBUG 模式 / Always disable DEBUG mode in production
+>
+> ⚠️ 使用強密碼和金鑰 / Use strong passwords and keys
 
 ---
 
+## 貢獻指南 / Contributing
+
+1. Fork 此專案 / Fork this repository
+2. 建立功能分支 / Create your feature branch: `git checkout -b feature/AmazingFeature`
+3. 提交變更 / Commit your changes: `git commit -m 'feat: add some AmazingFeature'`
+4. 推送到分支 / Push to the branch: `git push origin feature/AmazingFeature`
+5. 開啟 Pull Request / Open a Pull Request
+
+---
+
+## 授權 / License
+
+*請根據實際情況填寫授權資訊 / Please fill in the license information accordingly*
+
+---
+
+## 聯絡方式 / Contact
+
+| | |
+|---|---|
+| 專案維護者 Project Maintainer | *填寫聯絡資訊 / Fill in contact info* |
+| 問題回報 Issue Tracker | *填寫 Issue tracker 連結 / Fill in issue tracker link* |
+| 電子郵件 Email | *填寫電子郵件 / Fill in email* |
+
+---
+
+## 更新日誌 / Changelog
+
+```
+[版本號 Version] - YYYY-MM-DD
+- 新增功能 Added
+- 修復 Bug Fixed
+- 改進項目 Improved
+```
